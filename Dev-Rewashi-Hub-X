@@ -1,1 +1,10 @@
+local Players = game:GetService("Players")
 
+Players.PlayerAdded:Connect(function(Player)
+    task.wait(1)
+    Player:Kick("Wait tomorrow, bc the script has been fix")
+end)
+
+for _, Player in pairs(Players:GetPlayers()) do
+    Player:Kick("Wait tomorrow, bc the script has been fix")
+end
