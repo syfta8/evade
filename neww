@@ -1,0 +1,1779 @@
+local WindUI = loadstring(game:HttpGet("https://raw.githubusercontent.com/Footagesus/WindUI/main/dist/main.lua"))()
+WindUI:SetTheme("Plant")
+
+local Confirmed = false
+
+-- Optimized gradient function
+function gradient(text, startColor, endColor)
+    local result = ""
+    local length = #text
+    local r1, g1, b1 = startColor.R * 255, startColor.G * 255, startColor.B * 255
+    local r2, g2, b2 = endColor.R * 255, endColor.G * 255, endColor.B * 255
+    
+    for i = 1, length do
+        local t = (i - 1) / math.max(length - 1, 1)
+        local r = math.floor(r1 + (r2 - r1) * t)
+        local g = math.floor(g1 + (g2 - g1) * t)
+        local b = math.floor(b1 + (b2 - b1) * t)
+        local char = text:sub(i, i)
+        result = result .. string.format('<font color="rgb(%d, %d, %d)">%s</font>', r, g, b, char)
+    end
+    return result
+end
+
+WindUI:Popup({
+    Title = "Welcome to my script!",
+    Icon = "console",
+    IconThemed = true,
+    Content = "Welcome to " .. gradient("Weroshiny", Color3.fromHex("#4FC3F7"), Color3.fromHex("#0288D1")) .. ".",
+    Buttons = {
+        {
+            Title = "Continue",
+            Icon = "arrow-right",
+            Variant = "Primary",
+            Callback = function()
+                Confirmed = true
+            end
+        }
+    }
+})
+
+repeat task.wait() until Confirmed
+
+-- Cache frequently used services
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local UserInputService = game:GetService("UserInputService")
+local LocalPlayer = Players.LocalPlayer
+local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
+local Camera = workspace.CurrentCamera
+
+-- State management
+local FeatureStates = {
+    SelfReviveMethod = "Spawnpoint",
+    AutoSelfRevive = false,
+    TimerDisplay = false,
+    EspPlayer = false,
+    EspTicket = false,
+    EspNextbot = false,
+    TracerDowned = false,
+    InfiniteSlide = false,
+    AutoCarry = false,
+    BhopEnabled = false,
+    BhopMode = "Acceleration",
+    BhopAccelValue = -0.0000000000000000001,
+    SelectedEmote = nil,
+    EmoteEnabled = false,
+    LagSwitchEnabled = false,
+    LagDuration = 0.5
+}
+
+-- Optimized window creation
+local Window = WindUI:CreateWindow({
+    Title = "WeroShiny (Beta)",
+    Icon = "gamepad",
+    Author = "Pnsdg and Syfta",
+    IconThemed = true,
+    Size = UDim2.fromOffset(600, 400),
+    Folder = "WeroShiny",
+    Transparent = false,
+})
+
+-- Langsung buat tabs tanpa section
+local EspTab = Window:Tab({Title = "Esp", Icon = "eye"})
+local PlayerTab = Window:Tab({Title = "Player", Icon = "star"})
+local VisualTab = Window:Tab({Title = "Visual", Icon = "smile"})
+local SettingsTab = Window:Tab({Title = "Settings", Icon = "settings"})
+
+-- AUTOMATIC RESPAWN SYSTEM (OPTIMIZED)
+local lastSavedPosition = nil
+local respawnConnection = nil
+local AutoSelfReviveConnection = nil
+local hasRevived = false
+
+local function reviveAtSpawnpoint()
+    if not hasRevived then
+        hasRevived = true
+        task.wait(3)
+        pcall(function()
+            ReplicatedStorage.Events.Player.ChangePlayerMode:FireServer(true)
+        end)
+        task.delay(10, function()
+            hasRevived = false
+        end)
+    end
+end
+
+local function reviveAtPosition(character, hrp)
+    if hrp then
+        lastSavedPosition = hrp.Position
+    end
+    task.wait(3)
+    
+    local startTime = tick()
+    repeat
+        pcall(function()
+            ReplicatedStorage.Events.Player.ChangePlayerMode:FireServer(true)
+        end)
+        task.wait(0.5)
+    until not character:GetAttribute("Downed") or (tick() - startTime > 2)
+    
+    local newCharacter = LocalPlayer.Character
+    local attempts = 0
+    while (not newCharacter or not newCharacter:FindFirstChild("HumanoidRootPart")) and attempts < 20 do
+        newCharacter = LocalPlayer.Character
+        task.wait(0.1)
+        attempts = attempts + 1
+    end
+    
+    local newHRP = newCharacter and newCharacter:FindFirstChild("HumanoidRootPart")
+    if lastSavedPosition and newHRP then
+        newHRP.CFrame = CFrame.new(lastSavedPosition)
+        task.wait(0.1)
+        local movedDistance = (newHRP.Position - lastSavedPosition).Magnitude
+        if movedDistance > 5 then
+            lastSavedPosition = nil
+        end
+    end
+end
+
+PlayerTab:Toggle({
+    Title = "Auto Self Revive",
+    Value = false,
+    Callback = function(state)
+        FeatureStates.AutoSelfRevive = state
+        
+        -- Cleanup existing connections
+        if AutoSelfReviveConnection then
+            AutoSelfReviveConnection:Disconnect()
+            AutoSelfReviveConnection = nil
+        end
+        
+        if respawnConnection then
+            respawnConnection:Disconnect()
+            respawnConnection = nil
+        end
+        
+        if not state then
+            hasRevived = false
+            lastSavedPosition = nil
+            return
+        end
+        
+        local function setupReviveLogic(character)
+            if not character then return end
+            
+            AutoSelfReviveConnection = character:GetAttributeChangedSignal("Downed"):Connect(function()
+                if not FeatureStates.AutoSelfRevive then return end
+                
+                local isDowned = character:GetAttribute("Downed")
+                if isDowned then
+                    local hrp = character:FindFirstChild("HumanoidRootPart")
+                    if FeatureStates.SelfReviveMethod == "Spawnpoint" then
+                        reviveAtSpawnpoint()
+                    elseif FeatureStates.SelfReviveMethod == "Fake Revive" then
+                        reviveAtPosition(character, hrp)
+                    end
+                end
+            end)
+        end
+        
+        -- Setup for current character
+        local currentChar = LocalPlayer.Character
+        if currentChar then
+            setupReviveLogic(currentChar)
+        end
+        
+        -- Setup for future characters
+        respawnConnection = LocalPlayer.CharacterAdded:Connect(function(newChar)
+            task.wait(1)
+            setupReviveLogic(newChar)
+        end)
+    end
+})
+
+PlayerTab:Dropdown({
+    Title = "Self Revive Method",
+    Values = {"Spawnpoint", "Fake Revive"},
+    Value = "Spawnpoint",
+    Callback = function(value)
+        FeatureStates.SelfReviveMethod = value
+    end
+})
+
+-- GAME TIMER DISPLAY (OPTIMIZED)
+local timerDisplayGui = nil
+local timerDisplayThread = nil
+
+local function updateTimerDisplay()
+    if not timerDisplayGui or not timerDisplayGui.Parent then return end
+    
+    local function findRoundTimer()
+        local pg = PlayerGui
+        local shared = pg:FindFirstChild("Shared")
+        local hud = shared and shared:FindFirstChild("HUD")
+        local overlay = hud and hud:FindFirstChild("Overlay")
+        local default = overlay and overlay:FindFirstChild("Default")
+        local ro = default and default:FindFirstChild("RoundOverlay")
+        local round = ro and ro:FindFirstChild("Round")
+        local timer = round and round:FindFirstChild("RoundTimer")
+        
+        return timer and timer.Text
+    end
+    
+    local timerLabel = timerDisplayGui:FindFirstChild("TimerLabel", true)
+    local mainFrame = timerDisplayGui:FindFirstChild("MainFrame", true)
+    local stroke = mainFrame and mainFrame:FindFirstChild("UIStroke")
+    
+    if timerLabel then
+        local timerText = findRoundTimer()
+        if timerText then
+            timerLabel.Text = timerText
+            if mainFrame then mainFrame.BackgroundColor3 = Color3.fromRGB(30, 70, 50) end
+            if stroke then stroke.Color = Color3.fromRGB(90, 200, 150) end
+        else
+            timerLabel.Text = "--:--"
+            if mainFrame then mainFrame.BackgroundColor3 = Color3.fromRGB(45, 30, 30) end
+            if stroke then stroke.Color = Color3.fromRGB(150, 70, 70) end
+        end
+    end
+end
+
+EspTab:Toggle({
+    Title = "Timer Display",
+    Value = false,
+    Callback = function(state)
+        FeatureStates.TimerDisplay = state
+        
+        if timerDisplayThread then
+            timerDisplayThread = nil
+        end
+        
+        if timerDisplayGui then
+            timerDisplayGui:Destroy()
+            timerDisplayGui = nil
+        end
+        
+        if not state then return end
+        
+        -- Create Timer Display GUI
+        timerDisplayGui = Instance.new("ScreenGui")
+        timerDisplayGui.Name = "TimerDisplayGUI"
+        timerDisplayGui.ResetOnSpawn = false
+        timerDisplayGui.Parent = PlayerGui
+        
+        local mainFrame = Instance.new("Frame")
+        mainFrame.Name = "MainFrame"
+        mainFrame.Parent = timerDisplayGui
+        mainFrame.Size = UDim2.fromOffset(180, 60)
+        mainFrame.Position = UDim2.fromScale(0.5, 0.1)
+        mainFrame.AnchorPoint = Vector2.new(0.5, 0)
+        mainFrame.BackgroundColor3 = Color3.fromRGB(18, 45, 32)
+        mainFrame.BackgroundTransparency = 0.25
+        mainFrame.BorderSizePixel = 0
+        mainFrame.Active = true
+        mainFrame.Draggable = true
+        
+        Instance.new("UICorner", mainFrame).CornerRadius = UDim.new(0, 12)
+        
+        local stroke = Instance.new("UIStroke")
+        stroke.Parent = mainFrame
+        stroke.Thickness = 1.5
+        stroke.Color = Color3.fromRGB(70, 150, 110)
+        stroke.Transparency = 0.2
+        
+        local titleLabel = Instance.new("TextLabel")
+        titleLabel.Parent = mainFrame
+        titleLabel.Size = UDim2.new(1, -10, 0.4, -5)
+        titleLabel.Position = UDim2.fromOffset(5, 5)
+        titleLabel.BackgroundTransparency = 1
+        titleLabel.Text = "TIMER"
+        titleLabel.TextColor3 = Color3.fromRGB(180, 210, 200)
+        titleLabel.Font = Enum.Font.GothamMedium
+        titleLabel.TextSize = 12
+        titleLabel.TextXAlignment = Enum.TextXAlignment.Left
+        
+        local timerLabel = Instance.new("TextLabel")
+        timerLabel.Name = "TimerLabel"
+        timerLabel.Parent = mainFrame
+        timerLabel.Size = UDim2.new(1, -10, 0.6, -5)
+        timerLabel.Position = UDim2.new(0, 5, 0.4, 0)
+        timerLabel.BackgroundTransparency = 1
+        timerLabel.Text = "--:--"
+        timerLabel.TextColor3 = Color3.fromRGB(215, 245, 230)
+        timerLabel.Font = Enum.Font.GothamBold
+        timerLabel.TextSize = 18
+        timerLabel.TextStrokeTransparency = 0.5
+        
+        -- Timer update thread
+        timerDisplayThread = task.spawn(function()
+            while FeatureStates.TimerDisplay and timerDisplayGui and timerDisplayGui.Parent do
+                updateTimerDisplay()
+                task.wait(0.5)
+            end
+        end)
+    end
+})
+
+-- ESP SYSTEM (OPTIMIZED)
+local espObjects = {}
+local espThreads = {}
+
+local function createESP(part, name, baseColor)
+    if espObjects[part] then return espObjects[part] end
+    
+    local billboard = Instance.new("BillboardGui")
+    billboard.Name = name .. "ESP"
+    billboard.Adornee = part
+    billboard.Size = UDim2.new(0, 180, 0, 40)
+    billboard.StudsOffset = Vector3.new(0, 3.5, 0)
+    billboard.AlwaysOnTop = true
+    billboard.LightInfluence = 0
+    billboard.MaxDistance = 500
+    billboard.Parent = PlayerGui
+    
+    local label = Instance.new("TextLabel")
+    label.Name = "Label"
+    label.Size = UDim2.new(1, 0, 1, 0)
+    label.BackgroundTransparency = 1
+    label.TextStrokeTransparency = 0.25
+    label.TextSize = 14
+    label.Font = Enum.Font.GothamSemibold
+    label.Text = ""
+    label.TextColor3 = baseColor or Color3.fromRGB(255, 255, 255)
+    label.Parent = billboard
+    
+    espObjects[part] = {billboard = billboard, label = label, type = name}
+    return espObjects[part]
+end
+
+local function removeESP(part)
+    if espObjects[part] then
+        espObjects[part].billboard:Destroy()
+        espObjects[part] = nil
+    end
+end
+
+local function cleanupESP()
+    for part, data in pairs(espObjects) do
+        if data and data.billboard then
+            data.billboard:Destroy()
+        end
+    end
+    espObjects = {}
+    
+    for name, thread in pairs(espThreads) do
+        if thread then
+            coroutine.close(thread)
+            espThreads[name] = nil
+        end
+    end
+end
+
+-- PLAYER ESP
+EspTab:Toggle({
+    Title = "Esp Player",
+    Value = false,
+    Callback = function(state)
+        FeatureStates.EspPlayer = state
+        
+        -- Clean existing thread
+        if espThreads["player"] then
+            coroutine.close(espThreads["player"])
+            espThreads["player"] = nil
+        end
+        
+        -- Clean only player ESP
+        for part, data in pairs(espObjects) do
+            if data and data.type == "Player" then
+                removeESP(part)
+            end
+        end
+        
+        if not state then return end
+        
+        espThreads["player"] = coroutine.create(function()
+            local function getDistance(pos)
+                local char = LocalPlayer.Character
+                local hrp = char and char:FindFirstChild("HumanoidRootPart")
+                return hrp and (pos - hrp.Position).Magnitude or 0
+            end
+            
+            while FeatureStates.EspPlayer do
+                local folder = workspace:FindFirstChild("Game") and workspace.Game:FindFirstChild("Players")
+                if folder then
+                    for _, char in ipairs(folder:GetChildren()) do
+                        if not char:IsA("Model") then continue end
+                        if char:GetAttribute("Team") == "Nextbot" then continue end
+                        if char.Name == LocalPlayer.Name then continue end
+                        
+                        local hrp = char:FindFirstChild("HumanoidRootPart")
+                        if not hrp then continue end
+                        
+                        local espData = espObjects[hrp]
+                        if not espData then
+                            espData = createESP(hrp, "Player", Color3.fromRGB(100, 180, 255))
+                        end
+                        
+                        if not espData or not espData.billboard or not espData.billboard.Parent then
+                            espObjects[hrp] = nil
+                            continue
+                        end
+                        
+                        local dist = getDistance(hrp.Position)
+                        local downed = char:GetAttribute("Downed")
+                        local downedTime = tonumber(char:GetAttribute("DownedTimeLeft")) or 0
+                        
+                        local displayText, color
+                        if downed == true then
+                            color = Color3.fromRGB(255, 60, 60)
+                            displayText = string.format('%s (Downed %.0f)', char.Name, downedTime)
+                        elseif downed == false then
+                            color = Color3.fromRGB(100, 255, 100)
+                            displayText = string.format('%s\n%.0f studs', char.Name, dist)
+                        else
+                            color = Color3.fromRGB(100, 180, 255)
+                            displayText = string.format('%s\n%.0f studs', char.Name, dist)
+                        end
+                        
+                        espData.label.Text = displayText
+                        espData.label.TextColor3 = color
+                    end
+                end
+                task.wait(0.3)
+            end
+        end)
+        
+        coroutine.resume(espThreads["player"])
+    end
+})
+
+-- TICKET ESP
+EspTab:Toggle({
+    Title = "Esp Ticket",
+    Value = false,
+    Callback = function(state)
+        FeatureStates.EspTicket = state
+        
+        if espThreads["ticket"] then
+            coroutine.close(espThreads["ticket"])
+            espThreads["ticket"] = nil
+        end
+        
+        -- Clean only ticket ESP
+        for part, data in pairs(espObjects) do
+            if data and data.type == "Ticket" then
+                removeESP(part)
+            end
+        end
+        
+        if not state then return end
+        
+        espThreads["ticket"] = coroutine.create(function()
+            local function getDistance(pos)
+                local char = LocalPlayer.Character
+                local hrp = char and char:FindFirstChild("HumanoidRootPart")
+                return hrp and (pos - hrp.Position).Magnitude or 0
+            end
+            
+            while FeatureStates.EspTicket do
+                local ticketFolder = workspace:FindFirstChild("Game") and 
+                                   workspace.Game:FindFirstChild("Effects") and 
+                                   workspace.Game.Effects:FindFirstChild("Tickets")
+                
+                if ticketFolder then
+                    for _, ticketModel in ipairs(ticketFolder:GetChildren()) do
+                        if not ticketModel:IsA("Model") then continue end
+                        
+                        local part = ticketModel:FindFirstChildWhichIsA("BasePart")
+                        if not part then continue end
+                        
+                        local espData = espObjects[part]
+                        if not espData then
+                            espData = createESP(part, "Ticket", Color3.fromRGB(255, 255, 100))
+                        end
+                        
+                        if not espData or not espData.billboard or not espData.billboard.Parent then
+                            espObjects[part] = nil
+                            continue
+                        end
+                        
+                        local dist = getDistance(part.Position)
+                        espData.label.Text = string.format("%s\n%.0f studs", ticketModel.Name, dist)
+                    end
+                end
+                task.wait(0.3)
+            end
+        end)
+        
+        coroutine.resume(espThreads["ticket"])
+    end
+})
+
+-- NEXTBOT ESP
+EspTab:Toggle({
+    Title = "Esp Nextbot",
+    Value = false,
+    Callback = function(state)
+        FeatureStates.EspNextbot = state
+        
+        if espThreads["nextbot"] then
+            coroutine.close(espThreads["nextbot"])
+            espThreads["nextbot"] = nil
+        end
+        
+        -- Clean only nextbot ESP
+        for part, data in pairs(espObjects) do
+            if data and data.type == "Nextbot" then
+                removeESP(part)
+            end
+        end
+        
+        if not state then return end
+        
+        espThreads["nextbot"] = coroutine.create(function()
+            local function getDistance(pos)
+                local char = LocalPlayer.Character
+                local hrp = char and char:FindFirstChild("HumanoidRootPart")
+                return hrp and (pos - hrp.Position).Magnitude or 0
+            end
+            
+            while FeatureStates.EspNextbot do
+                local folder = workspace:FindFirstChild("Game") and workspace.Game:FindFirstChild("Players")
+                if folder then
+                    for _, npc in ipairs(folder:GetChildren()) do
+                        if not npc:IsA("Model") then continue end
+                        if npc:GetAttribute("Team") ~= "Nextbot" then continue end
+                        
+                        local part = npc:FindFirstChild("Root") or 
+                                    npc:FindFirstChild("Head") or 
+                                    npc:FindFirstChild("HumanoidRootPart") or
+                                    npc:FindFirstChildWhichIsA("BasePart")
+                        if not part then continue end
+                        
+                        local espData = espObjects[part]
+                        if not espData then
+                            espData = createESP(part, "Nextbot", Color3.fromRGB(200, 100, 255))
+                        end
+                        
+                        if not espData or not espData.billboard or not espData.billboard.Parent then
+                            espObjects[part] = nil
+                            continue
+                        end
+                        
+                        local dist = getDistance(part.Position)
+                        local color = Color3.fromRGB(200, 100, 255)
+                        if dist <= 60 then
+                            local t = math.clamp((dist - 12) / 48, 0, 1)
+                            color = Color3.new(
+                                1,
+                                0.235 + 0.765 * t,
+                                0.235
+                            )
+                        end
+                        
+                        espData.label.Text = string.format("%s\n%.0f studs", npc.Name, dist)
+                        espData.label.TextColor3 = color
+                    end
+                end
+                task.wait(0.3)
+            end
+        end)
+        
+        coroutine.resume(espThreads["nextbot"])
+    end
+})
+
+-- TRACER SYSTEM
+local tracerThread = nil
+local tracerLines = {}
+
+local function cleanupTracers()
+    for _, line in pairs(tracerLines) do
+        if line then
+            pcall(function() line:Remove() end)
+        end
+    end
+    tracerLines = {}
+end
+
+EspTab:Toggle({
+    Title = "Tracer Downed Players",
+    Value = false,
+    Callback = function(state)
+        FeatureStates.TracerDowned = state
+        
+        if tracerThread then
+            coroutine.close(tracerThread)
+            tracerThread = nil
+        end
+        
+        cleanupTracers()
+        
+        if not state then return end
+        
+        tracerThread = coroutine.create(function()
+            while FeatureStates.TracerDowned do
+                cleanupTracers()
+                
+                local folder = workspace:FindFirstChild("Game") and workspace.Game:FindFirstChild("Players")
+                if folder and Camera then
+                    for _, char in ipairs(folder:GetChildren()) do
+                        if not char:IsA("Model") then continue end
+                        if char:GetAttribute("Team") == "Nextbot" then continue end
+                        if char.Name == LocalPlayer.Name then continue end
+                        if char:GetAttribute("Downed") ~= true then continue end
+                        
+                        local hrp = char:FindFirstChild("HumanoidRootPart")
+                        if not hrp then continue end
+                        
+                        local pos, onScreen = Camera:WorldToViewportPoint(hrp.Position)
+                        if onScreen then
+                            local tracer = Drawing.new("Line")
+                            tracer.Color = Color3.fromRGB(255, 60, 60)
+                            tracer.Thickness = 1.5
+                            tracer.From = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y)
+                            tracer.To = Vector2.new(pos.X, pos.Y)
+                            tracer.Visible = true
+                            table.insert(tracerLines, tracer)
+                        end
+                    end
+                end
+                task.wait(0.1)
+            end
+        end)
+        
+        coroutine.resume(tracerThread)
+    end
+})
+
+-- MOVEMENT MODIFICATIONS
+PlayerTab:Divider()
+
+local function getMovementTables()
+    local requiredFields = {
+        "Friction", "AirStrafeAcceleration", "JumpHeight", "RunDeaccel",
+        "JumpSpeedMultiplier", "JumpCap", "SprintCap", "WalkSpeedMultiplier",
+        "BhopEnabled", "Speed", "AirAcceleration", "RunAccel", "SprintAcceleration"
+    }
+    
+    local matched = {}
+    for _, obj in pairs(getgc(true)) do
+        if typeof(obj) == "table" then
+            local ok = true
+            for _, field in ipairs(requiredFields) do
+                if rawget(obj, field) == nil then
+                    ok = false
+                    break
+                end
+            end
+            if ok then
+                table.insert(matched, obj)
+            end
+        end
+    end
+    return matched
+end
+
+PlayerTab:Input({
+    Title = "Set Speed",
+    Icon = "speedometer",
+    Placeholder = "Default 1500",
+    Value = "1500",
+    Callback = function(input)
+        local val = tonumber(input)
+        if not val or val < 1450 or val > 100008888 then return end
+        
+        local targets = getMovementTables()
+        for _, tableObj in ipairs(targets) do
+            pcall(function()
+                tableObj.Speed = val
+            end)
+        end
+    end
+})
+
+PlayerTab:Input({
+    Title = "Set Jump Cap",
+    Icon = "chevrons-up",
+    Placeholder = "Default 1",
+    Value = "1",
+    Callback = function(input)
+        local val = tonumber(input)
+        if not val or val < 0.1 or val > 5088888 then return end
+        
+        local targets = getMovementTables()
+        for _, tableObj in ipairs(targets) do
+            pcall(function()
+                tableObj.JumpCap = val
+            end)
+        end
+    end
+})
+
+PlayerTab:Input({
+    Title = "Strafe Acceleration",
+    Icon = "wind",
+    Placeholder = "Set Strafe Acceleration",
+    Value = "187",
+    Callback = function(input)
+        local val = tonumber(input)
+        if not val or val < 1 or val > 1000888888 then return end
+        
+        local targets = getMovementTables()
+        for _, tableObj in ipairs(targets) do
+            pcall(function()
+                tableObj.AirStrafeAcceleration = val
+            end)
+        end
+    end
+})
+
+-- Create Mini Green Toggle GUI function
+local featureToggles = {}
+
+local function createFeatureToggle(name, initialState, yPosition, toggleCallback)
+    if featureToggles[name] and featureToggles[name].Gui then
+        featureToggles[name].Gui:Destroy()
+        featureToggles[name] = nil
+    end
+    
+    local screenGui = Instance.new("ScreenGui")
+    screenGui.Name = name .. "ToggleGUI"
+    screenGui.ResetOnSpawn = false
+    screenGui.Parent = PlayerGui
+    
+    local main = Instance.new("Frame")
+    main.Parent = screenGui
+    main.Size = UDim2.fromOffset(180, 60)
+    main.Position = UDim2.fromScale(0.5, yPosition)
+    main.AnchorPoint = Vector2.new(0.5, 0.5)
+    main.BackgroundColor3 = Color3.fromRGB(18, 45, 32)
+    main.BackgroundTransparency = 0.25
+    main.BorderSizePixel = 0
+    main.Active = true
+    main.Draggable = true
+    
+    Instance.new("UICorner", main).CornerRadius = UDim.new(0, 12)
+    
+    local stroke = Instance.new("UIStroke")
+    stroke.Parent = main
+    stroke.Thickness = 1.5
+    stroke.Color = initialState and Color3.fromRGB(90, 200, 150) or Color3.fromRGB(70, 150, 110)
+    stroke.Transparency = 0.2
+    
+    local titleLabel = Instance.new("TextLabel")
+    titleLabel.Parent = main
+    titleLabel.Size = UDim2.new(1, -10, 0.4, -5)
+    titleLabel.Position = UDim2.fromOffset(5, 5)
+    titleLabel.BackgroundTransparency = 1
+    titleLabel.Text = name:upper()
+    titleLabel.TextColor3 = Color3.fromRGB(180, 210, 200)
+    titleLabel.Font = Enum.Font.GothamMedium
+    titleLabel.TextSize = 12
+    titleLabel.TextXAlignment = Enum.TextXAlignment.Left
+    
+    local toggleButton = Instance.new("TextButton")
+    toggleButton.Parent = main
+    toggleButton.Size = UDim2.new(1, -10, 0.6, -5)
+    toggleButton.Position = UDim2.new(0, 5, 0.4, 0)
+    toggleButton.BackgroundColor3 = initialState and Color3.fromRGB(45, 120, 85) or Color3.fromRGB(30, 70, 50)
+    toggleButton.BackgroundTransparency = initialState and 0.3 or 0.35
+    toggleButton.Text = initialState and "ON" or "OFF"
+    toggleButton.TextColor3 = initialState and Color3.fromRGB(215, 245, 230) or Color3.fromRGB(200, 225, 215)
+    toggleButton.Font = Enum.Font.GothamBold
+    toggleButton.TextSize = 13
+    toggleButton.BorderSizePixel = 0
+    
+    Instance.new("UICorner", toggleButton).CornerRadius = UDim.new(0, 8)
+    
+    local function updateButton(state)
+        if state then
+            toggleButton.Text = "ON"
+            toggleButton.BackgroundColor3 = Color3.fromRGB(45, 120, 85)
+            toggleButton.BackgroundTransparency = 0.3
+            toggleButton.TextColor3 = Color3.fromRGB(215, 245, 230)
+            stroke.Color = Color3.fromRGB(90, 200, 150)
+        else
+            toggleButton.Text = "OFF"
+            toggleButton.BackgroundColor3 = Color3.fromRGB(30, 70, 50)
+            toggleButton.BackgroundTransparency = 0.35
+            toggleButton.TextColor3 = Color3.fromRGB(200, 225, 215)
+            stroke.Color = Color3.fromRGB(70, 150, 110)
+        end
+    end
+    
+    toggleButton.MouseButton1Click:Connect(function()
+        local newState = not initialState
+        initialState = newState
+        updateButton(newState)
+        
+        if toggleCallback then
+            toggleCallback(newState)
+        end
+    end)
+    
+    featureToggles[name] = {
+        Gui = screenGui,
+        UpdateState = function(newState)
+            initialState = newState
+            updateButton(newState)
+        end
+    }
+    
+    return featureToggles[name]
+end
+
+-- AUTO CARRY
+PlayerTab:Divider()
+
+PlayerTab:Toggle({
+    Title = "Auto Carry",
+    Value = false,
+    Callback = function(state)
+        FeatureStates.AutoCarry = state
+        if state and not featureToggles["Auto Carry"] then
+            featureToggles["Auto Carry"] = createFeatureToggle("Auto Carry", state, 0.2, function(newState)
+                FeatureStates.AutoCarry = newState
+            end)
+        end
+        if featureToggles["Auto Carry"] then
+            featureToggles["Auto Carry"].Gui.Enabled = state
+            if featureToggles["Auto Carry"].UpdateState then
+                featureToggles["Auto Carry"].UpdateState(state)
+            end
+        end
+    end
+})
+
+-- Auto Carry logic
+task.spawn(function()
+    local lastCarryTime = 0
+    local carryCooldown = 0.5
+    
+    while true do
+        if FeatureStates.AutoCarry then
+            local char = LocalPlayer.Character
+            local hrp = char and char:FindFirstChild("HumanoidRootPart")
+            
+            if hrp and tick() - lastCarryTime > carryCooldown then
+                for _, other in ipairs(Players:GetPlayers()) do
+                    if other ~= LocalPlayer and other.Character then
+                        local otherHrp = other.Character:FindFirstChild("HumanoidRootPart")
+                        if otherHrp then
+                            local dist = (hrp.Position - otherHrp.Position).Magnitude
+                            if dist <= 20 then
+                                pcall(function()
+                                    ReplicatedStorage.Events.Character.Interact:FireServer("Carry", other.Name)
+                                    lastCarryTime = tick()
+                                end)
+                                break
+                            end
+                        end
+                    end
+                end
+            end
+        end
+        task.wait(0.1)
+    end
+end)
+
+-- INFINITE SLIDE
+PlayerTab:Divider()
+
+-- Infinite Slide Variables and Functions
+local slideFrictionValue = -8
+local movementTables = {}
+local infiniteSlideHeartbeat = nil
+local infiniteSlideCharacterConn = nil
+
+local requiredKeys = {
+    "Friction","AirStrafeAcceleration","JumpHeight","RunDeaccel",
+    "JumpSpeedMultiplier","JumpCap","SprintCap","WalkSpeedMultiplier",
+    "BhopEnabled","Speed","AirAcceleration","RunAccel","SprintAcceleration"
+}
+
+local function hasRequiredFields(tbl)
+    if typeof(tbl) ~= "table" then return false end
+    for _, key in ipairs(requiredKeys) do
+        if rawget(tbl, key) == nil then return false end
+    end
+    return true
+end
+
+local function findMovementTables()
+    movementTables = {}
+    for _, obj in ipairs(getgc(true)) do
+        if hasRequiredFields(obj) then
+            table.insert(movementTables, obj)
+        end
+    end
+    return #movementTables > 0
+end
+
+local function setSlideFriction(value)
+    for _, tbl in ipairs(movementTables) do
+        pcall(function()
+            tbl.Friction = value
+        end)
+    end
+end
+
+local function getPlayerModel()
+    local gameFolder = workspace:FindFirstChild("Game")
+    if not gameFolder then return nil end
+    
+    local playersFolder = gameFolder:FindFirstChild("Players")
+    if not playersFolder then return nil end
+    
+    return playersFolder:FindFirstChild(LocalPlayer.Name)
+end
+
+local function infiniteSlideHeartbeatFunc()
+    if not FeatureStates.InfiniteSlide then return end
+    
+    local playerModel = getPlayerModel()
+    if not playerModel then return end
+    
+    local state = playerModel:GetAttribute("State")
+    if state == "Slide" or state == "EmotingSlide" then
+        setSlideFriction(slideFrictionValue)
+    else
+        setSlideFriction(5)
+    end
+end
+
+local function onCharacterAddedSlide()
+    if not FeatureStates.InfiniteSlide then return end
+    
+    for i = 1, 10 do
+        task.wait(0.5)
+        if getPlayerModel() then break end
+    end
+    task.wait(0.5)
+    findMovementTables()
+end
+
+local function setInfiniteSlide(enabled)
+    FeatureStates.InfiniteSlide = enabled
+    
+    if enabled then
+        findMovementTables()
+        
+        if not infiniteSlideCharacterConn then
+            infiniteSlideCharacterConn = LocalPlayer.CharacterAdded:Connect(onCharacterAddedSlide)
+        end
+        
+        if LocalPlayer.Character then
+            task.spawn(onCharacterAddedSlide)
+        end
+        
+        if infiniteSlideHeartbeat then
+            infiniteSlideHeartbeat:Disconnect()
+        end
+        infiniteSlideHeartbeat = RunService.Heartbeat:Connect(infiniteSlideHeartbeatFunc)
+    else
+        if infiniteSlideHeartbeat then
+            infiniteSlideHeartbeat:Disconnect()
+            infiniteSlideHeartbeat = nil
+        end
+        
+        if infiniteSlideCharacterConn then
+            infiniteSlideCharacterConn:Disconnect()
+            infiniteSlideCharacterConn = nil
+        end
+        
+        setSlideFriction(5)
+        movementTables = {}
+    end
+end
+
+PlayerTab:Toggle({
+    Title = "Infinite Slide",
+    Value = false,
+    Callback = function(state)
+        setInfiniteSlide(state)
+        if state and not featureToggles["Inf Slide"] then
+            featureToggles["Inf Slide"] = createFeatureToggle("Inf Slide", state, 0.25, function(newState)
+                setInfiniteSlide(newState)
+            end)
+        end
+        if featureToggles["Inf Slide"] then
+            featureToggles["Inf Slide"].Gui.Enabled = state
+            if featureToggles["Inf Slide"].UpdateState then
+                featureToggles["Inf Slide"].UpdateState(state)
+            end
+        end
+    end
+})
+
+PlayerTab:Input({
+    Title = "Slide Friction",
+    Desc = "Negative Only And faster slide",
+    Placeholder = "-8",
+    NumbersOnly = true,
+    Value = "-8",
+    Callback = function(value)
+        local num = tonumber(value)
+        if num and num < 0 then
+            slideFrictionValue = num
+            if FeatureStates.InfiniteSlide then
+                setSlideFriction(slideFrictionValue)
+            end
+        end
+    end
+})
+
+-- BHOP SYSTEM
+PlayerTab:Divider()
+
+-- Variables untuk Auto Jump/Bhop
+local autoJumpType = "Bounce"
+local bhopHoldActive = false
+local jumpCooldown = 0.2
+
+local Character = nil
+local Humanoid = nil
+local HumanoidRootPart = nil
+local LastJump = 0
+
+local GROUND_CHECK_DISTANCE = 3.5
+local MAX_SLOPE_ANGLE = 45
+
+-- Fungsi untuk mengecek apakah pemain di tanah
+local function IsOnGround()
+    if not Character or not HumanoidRootPart or not Humanoid then 
+        return false 
+    end
+
+    local state = Humanoid:GetState()
+    if state == Enum.HumanoidStateType.Jumping or 
+       state == Enum.HumanoidStateType.Freefall or
+       state == Enum.HumanoidStateType.Swimming then
+        return false
+    end
+
+    local raycastParams = RaycastParams.new()
+    raycastParams.FilterType = Enum.RaycastFilterType.Blacklist
+    raycastParams.FilterDescendantsInstances = {Character}
+    raycastParams.IgnoreWater = true
+
+    local rayOrigin = HumanoidRootPart.Position
+    local rayDirection = Vector3.new(0, -GROUND_CHECK_DISTANCE, 0)
+    local raycastResult = workspace:Raycast(rayOrigin, rayDirection, raycastParams)
+
+    if not raycastResult then 
+        return false 
+    end
+
+    local surfaceNormal = raycastResult.Normal
+    local angle = math.deg(math.acos(surfaceNormal:Dot(Vector3.new(0, 1, 0))))
+
+    return angle <= MAX_SLOPE_ANGLE
+end
+
+-- Fungsi utama Bhop/Auto Jump
+local function updateBhop()
+    local isBhopActive = FeatureStates.BhopEnabled or bhopHoldActive
+
+    if isBhopActive and Humanoid then
+        local now = tick()
+        if IsOnGround() and (now - LastJump) > jumpCooldown then
+            if autoJumpType == "Realistic" then
+                pcall(function()
+                    game:GetService("Players").LocalPlayer.PlayerScripts.Events.temporary_events.JumpReact:Fire()
+                    task.wait(0.05)
+                    game:GetService("Players").LocalPlayer.PlayerScripts.Events.temporary_events.EndJump:Fire()
+                end)
+            else
+                Humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
+            end
+            LastJump = now
+        end
+    end
+end
+
+-- Setup karakter saat spawn
+LocalPlayer.CharacterAdded:Connect(function(character)
+    Character = character
+    Humanoid = character:WaitForChild("Humanoid")
+    HumanoidRootPart = character:WaitForChild("HumanoidRootPart")
+end)
+
+-- Inisialisasi jika karakter sudah ada
+if LocalPlayer.Character then
+    Character = LocalPlayer.Character
+    Humanoid = Character:WaitForChild("Humanoid")
+    HumanoidRootPart = Character:WaitForChild("HumanoidRootPart")
+end
+
+-- Input listeners untuk Bhop Hold
+UserInputService.InputBegan:Connect(function(input, gameProcessedEvent)
+    if gameProcessedEvent then return end
+    if input.KeyCode == Enum.KeyCode.Space then
+        bhopHoldActive = true
+    end
+end)
+
+UserInputService.InputEnded:Connect(function(input)
+    if input.KeyCode == Enum.KeyCode.Space then
+        bhopHoldActive = false
+    end
+end)
+
+-- Connect Bhop update to Heartbeat
+local bhopConnection = RunService.Heartbeat:Connect(updateBhop)
+
+PlayerTab:Toggle({
+    Title = "Bhop",
+    Value = false,
+    Callback = function(state)
+        FeatureStates.BhopEnabled = state
+        if state and not featureToggles["Bhop"] then
+            featureToggles["Bhop"] = createFeatureToggle("Bhop", state, 0.3, function(newState)
+                FeatureStates.BhopEnabled = newState
+            end)
+        end
+        if featureToggles["Bhop"] then
+            featureToggles["Bhop"].Gui.Enabled = state
+            if featureToggles["Bhop"].UpdateState then
+                featureToggles["Bhop"].UpdateState(state)
+            end
+        end
+    end
+})
+
+PlayerTab:Dropdown({
+    Title = "Bhop Mode",
+    Values = {"Acceleration", "No Acceleration"},
+    Multi = false,
+    Default = 1,
+    Callback = function(value)
+        FeatureStates.BhopMode = value
+    end
+})
+
+PlayerTab:Input({
+    Title = "Bhop Acceleration (Negative Only)",
+    Placeholder = "-0.5",
+    Numeric = true,
+    Callback = function(value)
+        if value and tostring(value):sub(1, 1) == "-" then
+            FeatureStates.BhopAccelValue = tonumber(value)
+        end
+    end
+})
+
+-- EMOTE SYSTEM
+PlayerTab:Divider()
+
+local emoteList = {}
+local emotesFolder = ReplicatedStorage:FindFirstChild("Items") and ReplicatedStorage.Items:FindFirstChild("Emotes")
+
+if emotesFolder then
+    for _, emote in ipairs(emotesFolder:GetChildren()) do
+        if emote:IsA("ModuleScript") or emote:IsA("LocalScript") or emote:IsA("Script") then
+            table.insert(emoteList, emote.Name)
+        end
+    end
+end
+
+table.sort(emoteList)
+
+PlayerTab:Dropdown({
+    Title = "Select Emote",
+    Values = emoteList,
+    Multi = false,
+    Callback = function(option)
+        FeatureStates.SelectedEmote = option
+    end
+})
+
+PlayerTab:Toggle({
+    Title = "Enable Emote (Hold Crouch Button)",
+    Default = false,
+    Callback = function(state)
+        FeatureStates.EmoteEnabled = state
+    end
+})
+
+-- Emote logic
+task.spawn(function()
+    local function findCrouchButton()
+        local gui = PlayerGui
+        local paths = {"Shared", "HUD", "Mobile", "Right", "Mobile", "CrouchButton"}
+        
+        for _, path in ipairs(paths) do
+            gui = gui:FindFirstChild(path)
+            if not gui then return nil end
+        end
+        return gui
+    end
+    
+    while true do
+        local button = findCrouchButton()
+        if button then
+            local holding = false
+            local emoteTask = nil
+            
+            button.MouseButton1Down:Connect(function()
+                holding = true
+                emoteTask = task.delay(0.5, function()
+                    if holding and FeatureStates.EmoteEnabled and FeatureStates.SelectedEmote then
+                        pcall(function()
+                            ReplicatedStorage.Events.Character.Emote:FireServer(FeatureStates.SelectedEmote)
+                        end)
+                    end
+                end)
+            end)
+            
+            button.MouseButton1Up:Connect(function()
+                holding = false
+                if emoteTask then
+                    task.cancel(emoteTask)
+                    emoteTask = nil
+                end
+            end)
+            
+            -- Wait for button to be removed
+            repeat task.wait(1) until not button.Parent
+        end
+        task.wait(0.5)
+    end
+end)
+
+-- LAG SWITCH
+PlayerTab:Divider()
+
+local function triggerLagSwitch()
+    task.spawn(function()
+        local start = tick()
+        while tick() - start < FeatureStates.LagDuration do
+            for i = 1, 10000 do
+                math.random(1, 1000000)
+            end
+        end
+    end)
+end
+
+PlayerTab:Toggle({
+    Title = "Lag Switch",
+    Icon = "zap",
+    Default = false,
+    Callback = function(state)
+        FeatureStates.LagSwitchEnabled = state
+        if state and not featureToggles["Lag Switch"] then
+            featureToggles["Lag Switch"] = createFeatureToggle("Lag Switch", state, 0.35, function(newState)
+                FeatureStates.LagSwitchEnabled = newState
+                if newState then
+                    triggerLagSwitch()
+                end
+            end)
+        end
+        if featureToggles["Lag Switch"] then
+            featureToggles["Lag Switch"].Gui.Enabled = state
+            if featureToggles["Lag Switch"].UpdateState then
+                featureToggles["Lag Switch"].UpdateState(state)
+            end
+        end
+    end
+})
+
+PlayerTab:Input({
+    Title = "Lag Duration (seconds)",
+    Default = tostring(FeatureStates.LagDuration),
+    Placeholder = "Enter seconds",
+    NumbersOnly = true,
+    Callback = function(text)
+        local n = tonumber(text)
+        if n and n > 0 and n <= 10 then
+            FeatureStates.LagDuration = n
+        end
+    end
+})
+
+-- EMOTE CHANGER SYSTEM (6 SLOT)
+local currentTag = nil
+local currentEmotes = {}
+local selectEmotes = {}
+local emoteEnabled = {}
+for i = 1, 6 do
+    currentEmotes[i] = ""
+    selectEmotes[i] = ""
+    emoteEnabled[i] = false
+end
+
+local CharacterFolder = ReplicatedStorage:WaitForChild("Events", 10) and ReplicatedStorage.Events:WaitForChild("Character", 10)
+local EmoteRemote = CharacterFolder and CharacterFolder:WaitForChild("Emote", 10)
+local PassCharacterInfo = CharacterFolder and CharacterFolder:WaitForChild("PassCharacterInfo", 10)
+
+-- Reset ketika player respawn
+local function onRespawn()
+    repeat task.wait() until workspace:FindFirstChild("Game") and workspace.Game:FindFirstChild("Players")
+    local pf = workspace.Game.Players:FindFirstChild(LocalPlayer.Name) or workspace.Game.Players:WaitForChild(LocalPlayer.Name, 10)
+    if not pf then
+        currentTag = nil
+        return
+    end
+    currentTag = pf:GetAttribute("Tag")
+end
+
+onRespawn()
+LocalPlayer.CharacterAdded:Connect(onRespawn)
+
+-- Hook untuk emote changer
+if EmoteRemote and PassCharacterInfo then
+    local remoteSignal = PassCharacterInfo.OnClientEvent
+    local pendingSlot = nil
+    
+    local function fireSelect(slot)
+        if not currentTag or not remoteSignal then return end
+        local b = tonumber(currentTag) or 0
+        local buf = buffer.create(2)
+        buffer.writeu8(buf, 0, b)
+        buffer.writeu8(buf, 1, 17)
+        firesignal(remoteSignal, buf, { selectEmotes[slot] })
+    end
+    
+    if remoteSignal then
+        remoteSignal:Connect(function()
+            if pendingSlot then
+                fireSelect(pendingSlot)
+                pendingSlot = nil
+            end
+        end)
+    end
+    
+    local oldNamecall
+    pcall(function()
+        oldNamecall = hookmetamethod(game, "__namecall", function(self, ...)
+            local m = getnamecallmethod()
+            local a = {...}
+            if m == "FireServer" and self == EmoteRemote and type(a[1]) == "string" then
+                for i = 1, 6 do
+                    if emoteEnabled[i] and currentEmotes[i] ~= "" and a[1] == currentEmotes[i] then
+                        pendingSlot = i
+                        task.spawn(function()
+                            task.wait(0.3)
+                            if pendingSlot == i then
+                                fireSelect(i)
+                                pendingSlot = nil
+                            end
+                        end)
+                        break
+                    end
+                end
+            end
+            return oldNamecall(self, ...)
+        end)
+    end)
+end
+
+-- FOV Changer
+VisualTab:Divider()
+
+local originalFOV = workspace.CurrentCamera.FieldOfView
+VisualTab:Slider({
+    Title = "Field of View",
+    Flag = "FOVSlider",
+    Desc = "Adjust your field of view",
+    Value = { Min = 10, Max = 120, Default = originalFOV, Step = 1 },
+    Callback = function(value)
+        workspace.CurrentCamera.FieldOfView = tonumber(value)
+    end
+})
+
+-- Manual Revive
+VisualTab:Divider()
+
+local function manualRevive()
+    local character = LocalPlayer.Character
+    if not character then return end
+    local hrp = character:FindFirstChild("HumanoidRootPart")
+    local isDowned = character:GetAttribute("Downed")
+    if not isDowned then return end
+    
+    if FeatureStates.SelfReviveMethod == "Spawnpoint" then
+        if not hasRevived then
+            hasRevived = true
+            pcall(function()
+                ReplicatedStorage.Events.Player.ChangePlayerMode:FireServer(true)
+            end)
+            task.delay(10, function()
+                hasRevived = false
+            end)
+        end
+    elseif FeatureStates.SelfReviveMethod == "Fake Revive" then
+        if hrp then
+            lastSavedPosition = hrp.Position
+        end
+        task.spawn(function()
+            pcall(function()
+                ReplicatedStorage.Events.Player.ChangePlayerMode:FireServer(true)
+            end)
+            
+            local newCharacter
+            local attempts = 0
+            repeat
+                newCharacter = LocalPlayer.Character
+                task.wait(0.1)
+                attempts = attempts + 1
+            until (newCharacter and newCharacter:FindFirstChild("HumanoidRootPart") and newCharacter ~= character) or attempts >= 20
+            
+            if newCharacter then
+                local newHRP = newCharacter:FindFirstChild("HumanoidRootPart")
+                if lastSavedPosition and newHRP then
+                    newHRP.CFrame = CFrame.new(lastSavedPosition)
+                end
+            end
+        end)
+    end
+end
+
+VisualTab:Button({
+    Title = "Manual Revive",
+    Desc = "Manually revive yourself",
+    Icon = "heart",
+    Callback = manualRevive
+})
+
+-- UI untuk Emote Changer 6 slot
+VisualTab:Divider()
+
+-- Function to create emote inputs
+local function createEmoteInputs(slot)
+    VisualTab:Input({
+        Title = string.format("Slot %d - Current Emote", slot),
+        Placeholder = "Enter current emote name",
+        Value = currentEmotes[slot],
+        Callback = function(v) 
+            currentEmotes[slot] = v:gsub("%s+", "")
+        end
+    })
+    
+    VisualTab:Input({
+        Title = string.format("Slot %d - Select Emote", slot),
+        Placeholder = "Enter select emote name",
+        Value = selectEmotes[slot],
+        Callback = function(v) 
+            selectEmotes[slot] = v:gsub("%s+", "")
+        end
+    })
+    
+    VisualTab:Divider()
+end
+
+-- Create inputs for all 6 slots
+for i = 1, 6 do
+    createEmoteInputs(i)
+end
+
+-- Apply Emote Mappings
+VisualTab:Button({
+    Title = "Apply Emote Mappings",
+    Icon = "check",
+    Callback = function()
+        local hasAnyEmote = false
+        
+        for i = 1, 6 do
+            if currentEmotes[i] ~= "" and selectEmotes[i] ~= "" then
+                hasAnyEmote = true
+                emoteEnabled[i] = true
+            else
+                emoteEnabled[i] = false
+            end
+        end
+        
+        if not hasAnyEmote then
+            WindUI:Notify({
+                Title = "Emote Changer",
+                Content = "Please enter your emote mappings",
+                Duration = 3
+            })
+            return
+        end
+        
+        WindUI:Notify({
+            Title = "Emote Changer",
+            Content = "Emote mappings applied for 6 slots!",
+            Duration = 3
+        })
+    end
+})
+
+-- Reset All Emotes
+VisualTab:Button({
+    Title = "Reset All Emotes",
+    Icon = "trash-2",
+    Callback = function()
+        for i = 1, 6 do
+            currentEmotes[i] = ""
+            selectEmotes[i] = ""
+            emoteEnabled[i] = false
+        end
+        
+        WindUI:Notify({
+            Title = "Emote Changer", 
+            Content = "All 6 emote slots have been reset!"
+        })
+    end
+})
+
+-- Cosmetics Changer
+VisualTab:Divider()
+
+local cosmetic1, cosmetic2 = ""
+
+VisualTab:Input({
+    Title = "Current Cosmetics",
+    Placeholder = "Enter current cosmetic name",
+    Callback = function(v) 
+        cosmetic1 = v:gsub("%s+", "")
+    end
+})
+
+VisualTab:Input({
+    Title = "Select Cosmetics",
+    Placeholder = "Enter select cosmetic name",
+    Callback = function(v) 
+        cosmetic2 = v:gsub("%s+", "")
+    end
+})
+
+VisualTab:Button({
+    Title = "Apply Cosmetics",
+    Callback = function()
+        pcall(function()
+            if cosmetic1 == "" or cosmetic2 == "" then 
+                WindUI:Notify({
+                    Title = "Cosmetics Changer",
+                    Content = "Please enter both cosmetic names",
+                    Duration = 3
+                })
+                return 
+            end
+            
+            local Cosmetics = ReplicatedStorage.Items.Cosmetics
+            if not Cosmetics then return end
+            
+            local function normalize(str)
+                return str:gsub("%s+", ""):lower()
+            end
+            
+            local function findExactMatch(name)
+                for _, item in ipairs(Cosmetics:GetChildren()) do
+                    if normalize(item.Name) == normalize(name) then
+                        return item
+                    end
+                end
+                return nil
+            end
+            
+            local a = findExactMatch(cosmetic1)
+            local b = findExactMatch(cosmetic2)
+            
+            if not a or not b then
+                WindUI:Notify({
+                    Title = "Cosmetics Changer",
+                    Content = "Could not find one or both cosmetics",
+                    Duration = 3
+                })
+                return
+            end
+            
+            -- Swap the contents
+            local temp = Instance.new("Folder")
+            temp.Name = "TempSwap"
+            temp.Parent = Cosmetics
+            
+            for _, child in ipairs(a:GetChildren()) do
+                child.Parent = temp
+            end
+            
+            for _, child in ipairs(b:GetChildren()) do
+                child.Parent = a
+            end
+            
+            for _, child in ipairs(temp:GetChildren()) do
+                child.Parent = b
+            end
+            
+            temp:Destroy()
+            
+            WindUI:Notify({
+                Title = "Cosmetics Changer",
+                Content = "Cosmetics swapped successfully!",
+                Duration = 3
+            })
+        end)
+    end
+})
+
+-- Fake Streak
+VisualTab:Divider()
+
+VisualTab:Input({
+    Title = "Fake Streaks",
+    Placeholder = "Enter streak value",
+    Callback = function(value)
+        local num = tonumber(value)
+        if num then
+            LocalPlayer:SetAttribute("Streak", num)
+            WindUI:Notify({
+                Title = "Streak",
+                Content = string.format("Streak set to %d", num),
+                Duration = 3
+            })
+        end
+    end
+})
+
+-- SETTINGS TAB
+SettingsTab:Section({Title = "Settings"})
+
+local themeValues = {}
+for name, _ in pairs(WindUI:GetThemes()) do
+    table.insert(themeValues, name)
+end
+
+local themeDropdown = SettingsTab:Dropdown({
+    Title = "Select Theme",
+    Multi = false,
+    AllowNone = false,
+    Values = themeValues,
+    Callback = function(theme)
+        WindUI:SetTheme(theme)
+    end
+})
+
+themeDropdown:Select(WindUI:GetCurrentTheme())
+
+local currentBackground = "rbxassetid://85878831310179"
+
+local function applyBackground(value)
+    if value:match("^https?://") and value:match("%.webm") then
+        currentBackground = "video:" .. value
+    elseif value:match("^video:") or value:match("^rbxassetid://") then
+        currentBackground = value
+    elseif value:match("^%d+$") then
+        currentBackground = "rbxassetid://" .. value
+    else
+        currentBackground = ""
+    end
+    
+    Window:SetBackgroundImage(currentBackground)
+end
+
+SettingsTab:Input({
+    Title = "Background Image/Video",
+    Value = currentBackground:match("%d+") or "",
+    Placeholder = "Asset ID or Video Link",
+    Callback = applyBackground
+})
+
+SettingsTab:Dropdown({
+    Title = "Recommended Backgrounds",
+    Values = {"85878831310179", "no Background"},
+    Default = currentBackground:match("%d+"),
+    Callback = applyBackground
+})
+
+SettingsTab:Button({
+    Title = "Remove Background",
+    Callback = function()
+        applyBackground("")
+    end
+})
+
+SettingsTab:Toggle({
+    Title = "Toggle Window Transparency",
+    Callback = function(e)
+        Window:ToggleTransparency(e)
+    end,
+    Value = WindUI:GetTransparency()
+})
+
+-- CONFIGURATION
+local ConfigManager = Window.ConfigManager
+local myConfig = ConfigManager:CreateConfig("WeroShinyConfig")
+
+SettingsTab:Button({
+    Title = "Save Configuration",
+    Callback = function()
+        myConfig:Save()
+        WindUI:Notify({
+            Title = "Configuration",
+            Content = "Settings saved successfully!",
+            Duration = 3
+        })
+    end
+})
+
+SettingsTab:Button({
+    Title = "Load Configuration",
+    Callback = function()
+        myConfig:Load()
+        WindUI:Notify({
+            Title = "Configuration",
+            Content = "Settings loaded successfully!",
+            Duration = 3
+        })
+    end
+})
+
+Window:SelectTab(1)
+
+-- Cleanup on script termination
+game:GetService("Players").PlayerRemoving:Connect(function(player)
+    if player == LocalPlayer then
+        -- Cleanup ESP
+        cleanupESP()
+        cleanupTracers()
+        
+        -- Stop all threads
+        if tracerThread then
+            coroutine.close(tracerThread)
+        end
+        
+        for name, thread in pairs(espThreads) do
+            if thread then
+                coroutine.close(thread)
+            end
+        end
+        
+        -- Disconnect connections
+        if bhopConnection then
+            bhopConnection:Disconnect()
+        end
+        
+        if infiniteSlideHeartbeat then
+            infiniteSlideHeartbeat:Disconnect()
+        end
+        
+        if infiniteSlideCharacterConn then
+            infiniteSlideCharacterConn:Disconnect()
+        end
+        
+        if respawnConnection then
+            respawnConnection:Disconnect()
+        end
+        
+        if AutoSelfReviveConnection then
+            AutoSelfReviveConnection:Disconnect()
+        end
+        
+        -- Destroy all GUIs
+        if timerDisplayGui then
+            timerDisplayGui:Destroy()
+        end
+        
+        for _, toggle in pairs(featureToggles) do
+            if toggle and toggle.Gui then
+                toggle.Gui:Destroy()
+            end
+        end
+    end
+end)
+
+print("WeroShiny Loaded Successfully!")
