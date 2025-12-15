@@ -73,7 +73,7 @@ local FeatureStates = {
 local Window = WindUI:CreateWindow({
     Title = "WeroShiny (Beta)",
     Icon = "gamepad",
-    Author = "Pnsdg and Syfta",
+    Author = "Pnsdg, t.me/ItsYomka and Syfta",
     IconThemed = true,
     Size = UDim2.fromOffset(600, 400),
     Folder = "WeroShiny",
@@ -81,8 +81,9 @@ local Window = WindUI:CreateWindow({
 })
 
 -- Langsung buat tabs tanpa section
-local EspTab = Window:Tab({Title = "Esp", Icon = "eye"})
-local PlayerTab = Window:Tab({Title = "Player", Icon = "star"})
+local PlayerTab = Window:Tab({Title = "Player", Icon = "User"})
+local AutoTab = Window:Tab({Title = "Auto", Icon = "Toggle"})
+local EspTab = Window:Tab({Title = "Esp", Icon = "star"})
 local VisualTab = Window:Tab({Title = "Visual", Icon = "smile"})
 local SettingsTab = Window:Tab({Title = "Settings", Icon = "settings"})
 
@@ -202,119 +203,6 @@ PlayerTab:Dropdown({
     end
 })
 
--- GAME TIMER DISPLAY (OPTIMIZED)
-local timerDisplayGui = nil
-local timerDisplayThread = nil
-
-local function updateTimerDisplay()
-    if not timerDisplayGui or not timerDisplayGui.Parent then return end
-    
-    local function findRoundTimer()
-        local pg = PlayerGui
-        local shared = pg:FindFirstChild("Shared")
-        local hud = shared and shared:FindFirstChild("HUD")
-        local overlay = hud and hud:FindFirstChild("Overlay")
-        local default = overlay and overlay:FindFirstChild("Default")
-        local ro = default and default:FindFirstChild("RoundOverlay")
-        local round = ro and ro:FindFirstChild("Round")
-        local timer = round and round:FindFirstChild("RoundTimer")
-        
-        return timer and timer.Text
-    end
-    
-    local timerLabel = timerDisplayGui:FindFirstChild("TimerLabel", true)
-    local mainFrame = timerDisplayGui:FindFirstChild("MainFrame", true)
-    local stroke = mainFrame and mainFrame:FindFirstChild("UIStroke")
-    
-    if timerLabel then
-        local timerText = findRoundTimer()
-        if timerText then
-            timerLabel.Text = timerText
-            if mainFrame then mainFrame.BackgroundColor3 = Color3.fromRGB(30, 70, 50) end
-            if stroke then stroke.Color = Color3.fromRGB(90, 200, 150) end
-        else
-            timerLabel.Text = "--:--"
-            if mainFrame then mainFrame.BackgroundColor3 = Color3.fromRGB(45, 30, 30) end
-            if stroke then stroke.Color = Color3.fromRGB(150, 70, 70) end
-        end
-    end
-end
-
-EspTab:Toggle({
-    Title = "Timer Display",
-    Value = false,
-    Callback = function(state)
-        FeatureStates.TimerDisplay = state
-        
-        if timerDisplayThread then
-            timerDisplayThread = nil
-        end
-        
-        if timerDisplayGui then
-            timerDisplayGui:Destroy()
-            timerDisplayGui = nil
-        end
-        
-        if not state then return end
-        
-        -- Create Timer Display GUI
-        timerDisplayGui = Instance.new("ScreenGui")
-        timerDisplayGui.Name = "TimerDisplayGUI"
-        timerDisplayGui.ResetOnSpawn = false
-        timerDisplayGui.Parent = PlayerGui
-        
-        local mainFrame = Instance.new("Frame")
-        mainFrame.Name = "MainFrame"
-        mainFrame.Parent = timerDisplayGui
-        mainFrame.Size = UDim2.fromOffset(180, 60)
-        mainFrame.Position = UDim2.fromScale(0.5, 0.1)
-        mainFrame.AnchorPoint = Vector2.new(0.5, 0)
-        mainFrame.BackgroundColor3 = Color3.fromRGB(18, 45, 32)
-        mainFrame.BackgroundTransparency = 0.25
-        mainFrame.BorderSizePixel = 0
-        mainFrame.Active = true
-        mainFrame.Draggable = true
-        
-        Instance.new("UICorner", mainFrame).CornerRadius = UDim.new(0, 12)
-        
-        local stroke = Instance.new("UIStroke")
-        stroke.Parent = mainFrame
-        stroke.Thickness = 1.5
-        stroke.Color = Color3.fromRGB(70, 150, 110)
-        stroke.Transparency = 0.2
-        
-        local titleLabel = Instance.new("TextLabel")
-        titleLabel.Parent = mainFrame
-        titleLabel.Size = UDim2.new(1, -10, 0.4, -5)
-        titleLabel.Position = UDim2.fromOffset(5, 5)
-        titleLabel.BackgroundTransparency = 1
-        titleLabel.Text = "TIMER"
-        titleLabel.TextColor3 = Color3.fromRGB(180, 210, 200)
-        titleLabel.Font = Enum.Font.GothamMedium
-        titleLabel.TextSize = 12
-        titleLabel.TextXAlignment = Enum.TextXAlignment.Left
-        
-        local timerLabel = Instance.new("TextLabel")
-        timerLabel.Name = "TimerLabel"
-        timerLabel.Parent = mainFrame
-        timerLabel.Size = UDim2.new(1, -10, 0.6, -5)
-        timerLabel.Position = UDim2.new(0, 5, 0.4, 0)
-        timerLabel.BackgroundTransparency = 1
-        timerLabel.Text = "--:--"
-        timerLabel.TextColor3 = Color3.fromRGB(215, 245, 230)
-        timerLabel.Font = Enum.Font.GothamBold
-        timerLabel.TextSize = 18
-        timerLabel.TextStrokeTransparency = 0.5
-        
-        -- Timer update thread
-        timerDisplayThread = task.spawn(function()
-            while FeatureStates.TimerDisplay and timerDisplayGui and timerDisplayGui.Parent do
-                updateTimerDisplay()
-                task.wait(0.5)
-            end
-        end)
-    end
-})
 
 -- ESP SYSTEM (OPTIMIZED)
 local espObjects = {}
@@ -826,18 +714,64 @@ local function createFeatureToggle(name, initialState, yPosition, toggleCallback
 end
 
 -- AUTO CARRY
-PlayerTab:Divider()
+AutoTab:Divider()
 
-PlayerTab:Toggle({
+
+local AutoCarryConnection = nil
+local InteractRemote = ReplicatedStorage:WaitForChild("Events"):WaitForChild("Character"):WaitForChild("Interact", 10)
+
+local function startAutoCarry()
+    if AutoCarryConnection then return end
+    
+    AutoCarryConnection = RunService.Heartbeat:Connect(function()
+        if not FeatureStates.AutoCarry then return end
+        local char = LocalPlayer.Character
+        local hrp = char and char:FindFirstChild("HumanoidRootPart")
+        if hrp and InteractRemote then
+            for _, other in ipairs(Players:GetPlayers()) do
+                if other ~= LocalPlayer and other.Character and other.Character:FindFirstChild("HumanoidRootPart") then
+                    local dist = (hrp.Position - other.Character.HumanoidRootPart.Position).Magnitude
+                    if dist <= 20 then
+                        local args = { "Carry", [3] = other.Name }
+                        pcall(function()
+                            InteractRemote:FireServer(unpack(args))
+                        end)
+                        task.wait(0.01)
+                    end
+                end
+            end
+        end
+    end)
+end
+
+local function stopAutoCarry()
+    if AutoCarryConnection then
+        AutoCarryConnection:Disconnect()
+        AutoCarryConnection = nil
+    end
+end
+
+AutoTab:Toggle({
     Title = "Auto Carry",
     Value = false,
     Callback = function(state)
         FeatureStates.AutoCarry = state
-        if state and not featureToggles["Auto Carry"] then
-            featureToggles["Auto Carry"] = createFeatureToggle("Auto Carry", state, 0.2, function(newState)
-                FeatureStates.AutoCarry = newState
-            end)
+        if state then
+            startAutoCarry()
+            if not featureToggles["Auto Carry"] then
+                featureToggles["Auto Carry"] = createFeatureToggle("Auto Carry", state, 0.2, function(newState)
+                    FeatureStates.AutoCarry = newState
+                    if newState then
+                        startAutoCarry()
+                    else
+                        stopAutoCarry()
+                    end
+                end)
+            end
+        else
+            stopAutoCarry()
         end
+        
         if featureToggles["Auto Carry"] then
             featureToggles["Auto Carry"].Gui.Enabled = state
             if featureToggles["Auto Carry"].UpdateState then
@@ -847,37 +781,6 @@ PlayerTab:Toggle({
     end
 })
 
--- Auto Carry logic
-task.spawn(function()
-    local lastCarryTime = 0
-    local carryCooldown = 0.5
-    
-    while true do
-        if FeatureStates.AutoCarry then
-            local char = LocalPlayer.Character
-            local hrp = char and char:FindFirstChild("HumanoidRootPart")
-            
-            if hrp and tick() - lastCarryTime > carryCooldown then
-                for _, other in ipairs(Players:GetPlayers()) do
-                    if other ~= LocalPlayer and other.Character then
-                        local otherHrp = other.Character:FindFirstChild("HumanoidRootPart")
-                        if otherHrp then
-                            local dist = (hrp.Position - otherHrp.Position).Magnitude
-                            if dist <= 20 then
-                                pcall(function()
-                                    ReplicatedStorage.Events.Character.Interact:FireServer("Carry", other.Name)
-                                    lastCarryTime = tick()
-                                end)
-                                break
-                            end
-                        end
-                    end
-                end
-            end
-        end
-        task.wait(0.1)
-    end
-end)
 
 -- INFINITE SLIDE
 PlayerTab:Divider()
@@ -1031,14 +934,14 @@ PlayerTab:Divider()
 -- Variables untuk Auto Jump/Bhop
 local autoJumpType = "Bounce"
 local bhopHoldActive = false
-local jumpCooldown = 0.2
+local jumpCooldown = 0.0000000000000000001
 
 local Character = nil
 local Humanoid = nil
 local HumanoidRootPart = nil
 local LastJump = 0
 
-local GROUND_CHECK_DISTANCE = 3.5
+local GROUND_CHECK_DISTANCE = 4
 local MAX_SLOPE_ANGLE = 45
 
 -- Fungsi untuk mengecek apakah pemain di tanah
@@ -1083,7 +986,7 @@ local function updateBhop()
             if autoJumpType == "Realistic" then
                 pcall(function()
                     game:GetService("Players").LocalPlayer.PlayerScripts.Events.temporary_events.JumpReact:Fire()
-                    task.wait(0.05)
+                    task.wait(0.0000000000000000005)
                     game:GetService("Players").LocalPlayer.PlayerScripts.Events.temporary_events.EndJump:Fire()
                 end)
             else
@@ -1370,20 +1273,74 @@ if EmoteRemote and PassCharacterInfo then
     end)
 end
 
--- FOV Changer
+-- FOV Ð¡Ð¼ÐµÐ½Ð°
 VisualTab:Divider()
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local ChangeSettingRemote = ReplicatedStorage:WaitForChild("Events"):WaitForChild("Data"):WaitForChild("ChangeSetting")
+local UpdatedEvent = game:GetService("ReplicatedStorage").Modules.Client.Settings.Updated
 
-local originalFOV = workspace.CurrentCamera.FieldOfView
-VisualTab:Slider({
-    Title = "Field of View",
-    Flag = "FOVSlider",
-    Desc = "Adjust your field of view",
-    Value = { Min = 10, Max = 120, Default = originalFOV, Step = 1 },
-    Callback = function(value)
-        workspace.CurrentCamera.FieldOfView = tonumber(value)
+local UpdatedEvent = game:GetService("ReplicatedStorage").Modules.Client.Settings.Updated
+local ChangeSettingRemote = game:GetService("ReplicatedStorage").Events.Data.ChangeSetting
+VisualTab:Toggle({
+    Title = "Timer Display",
+    Flag = "TimerDisplayToggle",
+    Value = false,
+    Callback = function(state)
+        featureStates.TimerDisplay = state
+
+        local function getRoundTimer()
+            local player = game:GetService("Players").LocalPlayer
+            local pg = player.PlayerGui
+            local shared = pg:FindFirstChild("Shared")
+            local hud = shared and shared:FindFirstChild("HUD")
+            local overlay = hud and hud:FindFirstChild("Overlay")
+            local default = overlay and overlay:FindFirstChild("Default")
+            local ro = default and default:FindFirstChild("RoundOverlay")
+            local round = ro and ro:FindFirstChild("Round")
+            return round and round:FindFirstChild("RoundTimer")
+        end
+
+        local function setContainerVisible(visible)
+            local pg = game:GetService("Players").LocalPlayer.PlayerGui
+            local main = pg:FindFirstChild("MainInterface")
+            if main then
+                local container = main:FindFirstChild("TimerContainer")
+                if container then
+                    container.Visible = visible
+                end
+            end
+        end
+
+        if state then
+            task.spawn(function()
+                while featureStates.TimerDisplay do
+                    local timer = getRoundTimer()
+                    if timer then
+                        setContainerVisible(not timer.Visible)
+                    else
+                        setContainerVisible(true)
+                    end
+                    task.wait(0.1)
+                end
+                setContainerVisible(false)
+            end)
+        else
+            setContainerVisible(false)
+        end
     end
 })
-
+VisualTab:Slider({
+    Title = "Field of View",
+    Desc = "ÐÐ°ÑÑ‚Ñ€Ð¾Ð¹Ñ‚Ðµ Ð¿Ð¾Ð»Ðµ Ð·Ñ€ÐµÐ½Ð¸Ñ",
+Value = { Min = 1, Max = 260, Default = nil },
+    Callback = function(value)
+        local num = tonumber(value)
+        if num then
+            ChangeSettingRemote:InvokeServer(2, num)
+            UpdatedEvent:Fire(2, num)
+        end
+    end
+})
 -- Manual Revive
 VisualTab:Divider()
 
@@ -1764,9 +1721,6 @@ game:GetService("Players").PlayerRemoving:Connect(function(player)
         end
         
         -- Destroy all GUIs
-        if timerDisplayGui then
-            timerDisplayGui:Destroy()
-        end
         
         for _, toggle in pairs(featureToggles) do
             if toggle and toggle.Gui then
@@ -1775,5 +1729,215 @@ game:GetService("Players").PlayerRemoving:Connect(function(player)
         end
     end
 end)
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local LocalPlayer = Players.LocalPlayer
+local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
+
+local function CreateTimerGUI()
+    local MainInterface = Instance.new("ScreenGui")
+    local TimerContainer = Instance.new("Frame")
+    local AspectRatio = Instance.new("UIAspectRatioConstraint")
+    local SizeLimit = Instance.new("UISizeConstraint")
+    local TimerDisplay = Instance.new("Frame")
+    local RoundedCorners = Instance.new("UICorner")
+    local BorderOutline = Instance.new("UIStroke")
+    local PanelBackground = Instance.new("ImageLabel")
+    local BackgroundCorners = Instance.new("UICorner")
+    local OverlayImage = Instance.new("ImageLabel")
+    local StatusText = Instance.new("TextLabel")
+    local TextGradient = Instance.new("UIGradient")
+    local StatusBorder = Instance.new("UIStroke")
+    local CountdownText = Instance.new("TextLabel")
+    local TimerGradient = Instance.new("UIGradient")
+    local CountdownBorder = Instance.new("UIStroke")
+
+    MainInterface.Name = "MainInterface"
+    MainInterface.Parent = PlayerGui
+    MainInterface.ResetOnSpawn = false
+    MainInterface.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+    MainInterface.Enabled = true
+    MainInterface.DisplayOrder = 1
+    TimerContainer.Name = "TimerContainer"
+    TimerContainer.Parent = MainInterface
+    TimerContainer.AnchorPoint = Vector2.new(0.5, 0)
+    TimerContainer.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+    TimerContainer.BackgroundTransparency = 1.000
+    TimerContainer.BorderColor3 = Color3.fromRGB(27, 42, 53)
+    TimerContainer.Position = UDim2.new(0.5, 0, 0, 0)
+    TimerContainer.Size = UDim2.new(1, 0, 1, 0)
+    TimerContainer.Visible = false
+
+    AspectRatio.Parent = TimerContainer
+
+    SizeLimit.Parent = TimerContainer
+    SizeLimit.MaxSize = Vector2.new(900, 900)
+
+    TimerDisplay.Name = "TimerDisplay"
+    TimerDisplay.Parent = TimerContainer
+    TimerDisplay.AnchorPoint = Vector2.new(0.5, 0)
+    TimerDisplay.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+    TimerDisplay.BackgroundTransparency = 0.600
+    TimerDisplay.BorderColor3 = Color3.fromRGB(27, 42, 53)
+    TimerDisplay.BorderSizePixel = 0
+    TimerDisplay.Position = UDim2.new(0.5, 0, 0.0399999991, 0)
+    TimerDisplay.Size = UDim2.new(0.25, 0, 0.100000001, 0)
+    TimerDisplay.ZIndex = 10000
+
+    RoundedCorners.CornerRadius = UDim.new(0, 4)
+    RoundedCorners.Parent = TimerDisplay
+
+    BorderOutline.Parent = TimerDisplay
+    BorderOutline.Thickness = 1
+    BorderOutline.Color = Color3.fromRGB(0, 0, 0)
+    BorderOutline.Transparency = 0.8
+
+    PanelBackground.Name = "PanelBackground"
+    PanelBackground.Parent = TimerDisplay
+    PanelBackground.AnchorPoint = Vector2.new(0.5, 0.5)
+    PanelBackground.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+    PanelBackground.BackgroundTransparency = 1.000
+    PanelBackground.BorderColor3 = Color3.fromRGB(27, 42, 53)
+    PanelBackground.Position = UDim2.new(0.5, 0, 0.5, 0)
+    PanelBackground.Size = UDim2.new(1, 0, 1, 0)
+    PanelBackground.ZIndex = 9999
+    PanelBackground.Image = "rbxassetid://196969716"
+    PanelBackground.ImageColor3 = Color3.fromRGB(21, 21, 21)
+    PanelBackground.ImageTransparency = 0.700
+
+    BackgroundCorners.CornerRadius = UDim.new(0, 4)
+    BackgroundCorners.Parent = PanelBackground
+
+    OverlayImage.Parent = TimerDisplay
+    OverlayImage.AnchorPoint = Vector2.new(0.5, 0.5)
+    OverlayImage.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+    OverlayImage.BackgroundTransparency = 1.000
+    OverlayImage.BorderColor3 = Color3.fromRGB(27, 42, 53)
+    OverlayImage.Position = UDim2.new(0.5, 0, 0.5, 0)
+    OverlayImage.Size = UDim2.new(0.800000012, 0, 1, 0)
+    OverlayImage.ZIndex = 10001
+    OverlayImage.Image = "rbxassetid://6761866149"
+    OverlayImage.ImageColor3 = Color3.fromRGB(165, 194, 255)
+    OverlayImage.ImageTransparency = 0.900
+    OverlayImage.ScaleType = Enum.ScaleType.Crop
+
+    StatusText.Name = "StatusText"
+    StatusText.Parent = TimerDisplay
+    StatusText.AnchorPoint = Vector2.new(0.5, 0.5)
+    StatusText.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+    StatusText.BackgroundTransparency = 1.000
+    StatusText.BorderColor3 = Color3.fromRGB(27, 42, 53)
+    StatusText.Position = UDim2.new(0.5, 0, 0.25, 0)
+    StatusText.Size = UDim2.new(0.800000012, 0, 0.25, 0)
+    StatusText.ZIndex = 10002
+    StatusText.Font = Enum.Font.GothamBold
+    StatusText.Text = "ROUND ACTIVE"
+    StatusText.TextColor3 = Color3.fromRGB(165, 194, 255)
+    StatusText.TextScaled = true
+    StatusText.TextSize = 14.000
+    StatusText.TextStrokeTransparency = 0.950
+    StatusText.TextWrapped = true
+
+    TextGradient.Color = ColorSequence.new{ColorSequenceKeypoint.new(0.00, Color3.fromRGB(255, 255, 255)), ColorSequenceKeypoint.new(1.00, Color3.fromRGB(193, 193, 193))}
+    TextGradient.Rotation = 90
+    TextGradient.Parent = StatusText
+
+    StatusBorder.Parent = StatusText
+    StatusBorder.Thickness = 2
+    StatusBorder.Color = Color3.fromRGB(0, 0, 0)
+    StatusBorder.Transparency = 0.5
+
+    CountdownText.Name = "CountdownText"
+    CountdownText.Parent = TimerDisplay
+    CountdownText.AnchorPoint = Vector2.new(0.5, 0.5)
+    CountdownText.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+    CountdownText.BackgroundTransparency = 1.000
+    CountdownText.BorderColor3 = Color3.fromRGB(27, 42, 53)
+    CountdownText.Position = UDim2.new(0.5, 0, 0.649999976, 0)
+    CountdownText.Size = UDim2.new(0.5, 0, 0.5, 0)
+    CountdownText.ZIndex = 10002
+    CountdownText.Font = Enum.Font.GothamBold
+    CountdownText.Text = "0:00"
+    CountdownText.TextColor3 = Color3.fromRGB(165, 194, 255)
+    CountdownText.TextScaled = true
+    CountdownText.TextSize = 14.000
+    CountdownText.TextStrokeTransparency = 0.950
+    CountdownText.TextWrapped = true
+
+    TimerGradient.Color = ColorSequence.new{ColorSequenceKeypoint.new(0.00, Color3.fromRGB(255, 255, 255)), ColorSequenceKeypoint.new(1.00, Color3.fromRGB(193, 193, 193))}
+    TimerGradient.Rotation = 90
+    TimerGradient.Parent = CountdownText
+
+    CountdownBorder.Parent = CountdownText
+    CountdownBorder.Thickness = 2
+    CountdownBorder.Color = Color3.fromRGB(0, 0, 0)
+    CountdownBorder.Transparency = 0.5
+
+    return CountdownText, StatusText, MainInterface, TimerContainer
+end
+
+local TimerLabel, StatusLabel, MainInterface, TimerContainer = CreateTimerGUI()
+
+local statsFolder = workspace:WaitForChild("Game"):WaitForChild("Stats")
+
+local timerConnection
+
+local function formatTime(seconds)
+    if not seconds then return "0:00" end
+    
+    seconds = math.floor(tonumber(seconds) or 0)
+    local minutes = math.floor(seconds / 60)
+    local remainingSeconds = seconds % 60
+    
+    return string.format("%d:%02d", minutes, remainingSeconds)
+end
+
+local function setupTimerConnection()
+    if timerConnection then
+        timerConnection:Disconnect()
+    end
+    
+    if statsFolder then
+        timerConnection = statsFolder:GetAttributeChangedSignal("Timer"):Connect(function()
+            local timerValue = statsFolder:GetAttribute("Timer")
+            local roundStarted = statsFolder:GetAttribute("RoundStarted")
+            
+            TimerLabel.Text = formatTime(timerValue)
+            
+            TimerLabel.TextColor3 = timerValue and timerValue <= 5 and Color3.fromRGB(215, 100, 100) or Color3.fromRGB(165, 194, 255)
+            
+            StatusLabel.Text = roundStarted and "ROUND ACTIVE" or "INTERMISSION"
+        end)
+        
+        local initialTimer = statsFolder:GetAttribute("Timer")
+        local initialRoundStarted = statsFolder:GetAttribute("RoundStarted")
+        
+        TimerLabel.Text = formatTime(initialTimer)
+        TimerLabel.TextColor3 = initialTimer and initialTimer <= 5 and Color3.fromRGB(215, 100, 100) or Color3.fromRGB(165, 194, 255)
+        StatusLabel.Text = initialRoundStarted and "ROUND ACTIVE" or "INTERMISSION"
+    end
+end
+
+setupTimerConnection()
+
+local folderAddedConnection
+folderAddedConnection = workspace.ChildAdded:Connect(function(child)
+    if child.Name == "Game" then
+        local gameFolder = child:WaitForChild("Stats")
+        statsFolder = gameFolder
+        setupTimerConnection()
+    end
+end)
+
+local function cleanupTimer()
+    if timerConnection then
+        timerConnection:Disconnect()
+        timerConnection = nil
+    end
+    if folderAddedConnection then
+        folderAddedConnection:Disconnect()
+        folderAddedConnection = nil
+    end
+end
 
 print("WeroShiny Loaded Successfully!")
