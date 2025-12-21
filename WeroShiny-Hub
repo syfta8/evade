@@ -39,8 +39,7 @@ WindUI:Popup({
 
 repeat task.wait() until Confirmed
 
-if not
-workspace:FindFirstChild("SecurityPart") then
+if not workspace:FindFirstChild("SecurityPart") then
     local SecurityPart = Instance.new("Part")
     SecurityPart.Name = "SecurityPart"
     SecurityPart.Size = Vector3.new(10, 1, 10)
@@ -51,9 +50,6 @@ workspace:FindFirstChild("SecurityPart") then
     SecurityPart.CanTouch = false
     SecurityPart.Parent = workspace
 end
-
-local moneyFarmEnabled = false
-local ticketFarmEnabled = false
 
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
@@ -107,146 +103,7 @@ local AutoTab = Window:Tab({Title = "Auto", Icon = "check"})
 local FPSTab = Window:Tab({Title = "FPS", Icon = "monitor"})
 local EspTab = Window:Tab({Title = "Esp", Icon = "star"})
 local VisualTab = Window:Tab({Title = "Visual", Icon = "smile"})
-local SettingsTab = Window:Tab({Title = "Settings", Icon = "settings"})
-
-local player = game:GetService("Players").LocalPlayer
-local Events = ReplicatedStorage:WaitForChild("Events", 10)
-local CharacterFolder = Events and Events:WaitForChild("Character", 10)
-local EmoteRemote = CharacterFolder and CharacterFolder:WaitForChild("Emote", 10)
-local PassCharacterInfo = CharacterFolder and CharacterFolder:WaitForChild("PassCharacterInfo", 10)
-
-local remoteSignal = PassCharacterInfo and PassCharacterInfo.OnClientEvent
-local currentTag = nil
-local currentEmotes = table.create(12, "")
-local selectEmotes = table.create(12, "")
-local emoteEnabled = table.create(12, false)
-
-local currentEmoteInputs = {}
-local selectEmoteInputs = {}
-
-local function readTagFromFolder(f)
-    if not f then return nil end
-    local a = f:GetAttribute("Tag")
-    if a ~= nil then 
-        return a 
-    end
-    local o = f:FindFirstChild("Tag")
-    if o and o:IsA("ValueBase") then 
-        return o.Value 
-    end
-    return nil
-end
-
-local function onRespawn()
-    currentTag = nil
-    pendingSlot = nil
-    
-    task.spawn(function()
-        local startTime = tick()
-        
-        while tick() - startTime < 10 do
-            if workspace:FindFirstChild("Game") and workspace.Game:FindFirstChild("Players") then
-                local pf = workspace.Game.Players:FindFirstChild(player.Name)
-                if pf then
-                    currentTag = readTagFromFolder(pf)
-                    if currentTag then
-                        local b = tonumber(currentTag)
-                        if b and b >= 0 and b <= 255 then
-                            break
-                        else
-                            currentTag = nil
-                        end
-                    end
-                end
-            end
-            task.wait(0.5)
-        end
-    end)
-end
-
-local pendingSlot = nil
-local blockOriginalEmote = false
-
-local function fireSelect(slot)
-    if not currentTag then return end
-    
-    local b = tonumber(currentTag)
-    if not b or b < 0 or b > 255 then return end
-    if not selectEmotes[slot] or selectEmotes[slot] == "" then return end
-    
-    local buf = buffer.create(2)
-    buffer.writeu8(buf, 0, b)
-    buffer.writeu8(buf, 1, 17)
-    
-    if remoteSignal then
-        firesignal(remoteSignal, buf, {selectEmotes[slot]})
-    end
-end
-
-if PassCharacterInfo and EmoteRemote then
-    PassCharacterInfo.OnClientEvent:Connect(function(...)
-        if not pendingSlot then return end
-        local slot = pendingSlot
-        pendingSlot = nil
-        task.wait(0.1)
-        fireSelect(slot)
-    end)
-
-    local oldNamecall
-    oldNamecall = hookmetamethod(game, "__namecall", function(self, ...)
-        local m = getnamecallmethod()
-        local a = {...}
-        
-        if m == "FireServer" and self == EmoteRemote and type(a[1]) == "string" then
-            for i = 1, 12 do
-                if emoteEnabled[i] and currentEmotes[i] ~= "" and a[1] == currentEmotes[i] then
-                    pendingSlot = i
-                    blockOriginalEmote = true
-                    
-                    task.spawn(function()
-                        task.wait(0.1)
-                        blockOriginalEmote = false
-                        if pendingSlot == i then
-                            pendingSlot = nil
-                            fireSelect(i)
-                        end
-                    end)
-                    
-                    if blockOriginalEmote then
-                        return nil
-                    end
-                end
-            end
-        end
-        
-        return oldNamecall(self, ...)
-    end)
-
-    if player.Character then
-        task.spawn(onRespawn)
-    end
-    
-    player.CharacterAdded:Connect(function()
-        task.wait(1)
-        onRespawn()
-    end)
-    
-    if workspace:FindFirstChild("Game") and workspace.Game:FindFirstChild("Players") then
-        workspace.Game.Players.ChildAdded:Connect(function(child)
-            if child.Name == player.Name then
-                task.wait(0.5)
-                onRespawn()
-            end
-        end)
-        
-        workspace.Game.Players.ChildRemoved:Connect(function(child)
-            if child.Name == player.Name then
-                currentTag = nil
-                pendingSlot = nil
-            end
-        end)
-    end
-end
+local SettingsTab = Window:Tab({Title = "Settings", Icon = "user"})
 
 local featureToggles = {}
 
@@ -343,7 +200,7 @@ local function createFeatureToggle(name, initialState, yPosition, toggleCallback
 end
 
 -- ================================
--- FRONT JUMP SYSTEM (ADDED)
+-- FRONT JUMP SYSTEM
 -- ================================
 local frontJumpVelocity = nil
 
@@ -1197,9 +1054,9 @@ AutoTab:Slider({
 })
 
 AutoTab:Divider()
+
 local AutoTicketFarmConnection = nil
 
--- Fungsi untuk Auto Ticket Farm
 local function startAutoTicketFarm()
     local securityPart = workspace:FindFirstChild("SecurityPart")
     if not securityPart then
@@ -1223,29 +1080,24 @@ local function startAutoTicketFarm()
                        workspace.Game.Effects:FindFirstChild("Tickets")
         
         if character and humanoidRootPart then
-            -- Jika player downed, respawn
             if character:GetAttribute("Downed") then
                 ReplicatedStorage.Events.Player.ChangePlayerMode:FireServer(true)
                 humanoidRootPart.CFrame = securityPart.CFrame + Vector3.new(0, 0, 0)
                 return
             end
             
-            -- Cari tickets
             if tickets then
                 local activeTickets = tickets:GetChildren()
                 if #activeTickets > 0 then
-                    -- Teleport ke ticket pertama
                     local ticketPart = activeTickets[1]:FindFirstChild("HumanoidRootPart")
                     if ticketPart then
                         local targetPosition = ticketPart.Position + Vector3.new(0, 0, 0)
                         humanoidRootPart.CFrame = CFrame.new(targetPosition)
                     end
                 else
-                    -- Kembali ke security part jika tidak ada ticket
                     humanoidRootPart.CFrame = securityPart.CFrame + Vector3.new(0, 3, 0)
                 end
             else
-                -- Kembali ke security part jika folder tickets tidak ada
                 humanoidRootPart.CFrame = securityPart.CFrame + Vector3.new(0, 3, 0)
             end
         end
@@ -1258,7 +1110,6 @@ local function stopAutoTicketFarm()
         AutoTicketFarmConnection = nil
     end
     
-    -- Kembali ke security part
     local character = LocalPlayer.Character
     local humanoidRootPart = character and character:FindFirstChild("HumanoidRootPart")
     local securityPart = workspace:FindFirstChild("SecurityPart")
@@ -1267,7 +1118,6 @@ local function stopAutoTicketFarm()
     end
 end
 
--- Toggle di AutoTab
 AutoTab:Toggle({
     Title = "Auto Ticket Farm",
     Desc = "Auto farm tickets",
@@ -1282,11 +1132,6 @@ AutoTab:Toggle({
     end
 })
 
--- Tambahkan di bagian FeatureStates (setelah baris 199):
-FeatureStates.AutoMoneyFarm = false
-FeatureStates.AutoMoneyFarmConnection = nil
-
--- Fungsi untuk memulai Auto Money Farm
 local function startAutoMoneyFarm()
     local securityPart = workspace:FindFirstChild("SecurityPart")
     if not securityPart then
@@ -1298,13 +1143,11 @@ local function startAutoMoneyFarm()
         return
     end
     
-    -- Stop connection lama jika ada
     if FeatureStates.AutoMoneyFarmConnection then
         FeatureStates.AutoMoneyFarmConnection:Disconnect()
         FeatureStates.AutoMoneyFarmConnection = nil
     end
     
-    -- Connection untuk Auto Money Farm
     FeatureStates.AutoMoneyFarmConnection = RunService.Heartbeat:Connect(function()
         if not FeatureStates.AutoMoneyFarm then return end
         
@@ -1314,7 +1157,6 @@ local function startAutoMoneyFarm()
         local rootPart = character:FindFirstChild("HumanoidRootPart")
         if not rootPart then return end
         
-        -- Cek jika character sendiri downed
         if character:GetAttribute("Downed") then
             ReplicatedStorage.Events.Player.ChangePlayerMode:FireServer(true)
             task.wait(2)
@@ -1324,27 +1166,22 @@ local function startAutoMoneyFarm()
         local downedPlayerFound = false
         local playersInGame = workspace:FindFirstChild("Game") and workspace.Game:FindFirstChild("Players")
         
-        -- Cari player yang downed
         if playersInGame then
             for _, playerModel in ipairs(playersInGame:GetChildren()) do
                 if not playerModel:IsA("Model") then continue end
                 if playerModel.Name == LocalPlayer.Name then continue end
                 
-                -- Cek jika player downed
                 local isDowned = playerModel:GetAttribute("Downed")
                 if isDowned == true then
                     local targetHRP = playerModel:FindFirstChild("HumanoidRootPart")
                     if not targetHRP then continue end
                     
-                    -- Cek distance
                     local distance = (rootPart.Position - targetHRP.Position).Magnitude
                     if distance > 50 then
-                        -- Teleport ke player yang downed
                         rootPart.CFrame = targetHRP.CFrame + Vector3.new(0, 3, 0)
                         task.wait(0.5)
                     end
                     
-                    -- Revive player tersebut
                     pcall(function()
                         ReplicatedStorage.Events.Character.Interact:FireServer("Revive", true, playerModel.Name)
                     end)
@@ -1355,7 +1192,6 @@ local function startAutoMoneyFarm()
             end
         end
         
-        -- Jika tidak ada player downed, kembali ke security part
         if not downedPlayerFound then
             local currentPos = rootPart.Position
             local securityPos = securityPart.Position
@@ -1368,14 +1204,12 @@ local function startAutoMoneyFarm()
     end)
 end
 
--- Fungsi untuk menghentikan Auto Money Farm
 local function stopAutoMoneyFarm()
     if FeatureStates.AutoMoneyFarmConnection then
         FeatureStates.AutoMoneyFarmConnection:Disconnect()
         FeatureStates.AutoMoneyFarmConnection = nil
     end
     
-    -- Kembali ke security part
     local character = LocalPlayer.Character
     local rootPart = character and character:FindFirstChild("HumanoidRootPart")
     local securityPart = workspace:FindFirstChild("SecurityPart")
@@ -1385,7 +1219,6 @@ local function stopAutoMoneyFarm()
     end
 end
 
--- Tambahkan toggle di AutoTab
 AutoTab:Toggle({
     Title = "Auto Money Farm",
     Desc = "Auto revive players for money",
@@ -1393,7 +1226,6 @@ AutoTab:Toggle({
     Callback = function(state)
         FeatureStates.AutoMoneyFarm = state
         
-        -- Buat feature toggle
         if state and not featureToggles["Auto Money Farm"] then
             featureToggles["Auto Money Farm"] = createFeatureToggle("Auto Money Farm", state, 0.4, function(newState)
                 FeatureStates.AutoMoneyFarm = newState
@@ -1511,7 +1343,6 @@ FPSTab:Button({
 })
 
 local function optimizeGraphics()
-    -- 1. Optimize parts
     for _, obj in ipairs(workspace:GetDescendants()) do
         if obj:IsA("BasePart") then
             pcall(function()
@@ -1534,7 +1365,6 @@ local function optimizeGraphics()
         end
     end
     
-    -- 2. Optimize lighting
     local lighting = game:GetService("Lighting")
     pcall(function()
         lighting.GlobalShadows = false
@@ -1544,7 +1374,6 @@ local function optimizeGraphics()
         lighting.Technology = Enum.Technology.Voxel
     end)
     
-    -- 3. Optimize workspace
     workspace.DescendantAdded:Connect(function(obj)
         if obj:IsA("ParticleEmitter") or obj:IsA("Trail") then
             task.wait(0.1)
@@ -1556,15 +1385,12 @@ local function optimizeGraphics()
 end
 
 local function optimizeNetwork()
-    -- Optimize network settings
-    local stats = game:GetService("Stats")
     settings().Physics.AllowSleep = true
     settings().Network.IncomingReplicationLag = 0
     game:GetService("NetworkClient"):SetOutgoingKBPSLimit(math.huge)
 end
 
 local function cleanWorkspace()
-    -- Remove unnecessary debris
     for _, obj in ipairs(workspace:GetChildren()) do
         if obj:IsA("Model") and obj.Name == "Debris" then
             obj:Destroy()
@@ -1579,7 +1405,6 @@ FPSTab:Button({
     Desc = "Reduces graphics, optimizes network, cleans workspace",
     Icon = "zap",
     Callback = function()
-        -- Run all optimizations
         optimizeGraphics()
         optimizeNetwork()
         cleanWorkspace()
@@ -1592,7 +1417,6 @@ FPSTab:Button({
     end
 })
 
--- Auto-optimize for new objects
 FPSTab:Toggle({
     Title = "Auto-Optimize New Objects",
     Desc = "Automatically optimize new particles/debris",
@@ -1611,7 +1435,6 @@ FPSTab:Toggle({
     end
 })
 
--- FPS Boost
 FPSTab:Toggle({
     Title = "FPS Boost",
     Desc = "Reduce quality for maximum FPS",
@@ -1621,7 +1444,6 @@ FPSTab:Toggle({
         local UserGameSettings = UserSettings():GetService("UserGameSettings")
         
         if state then
-            -- Set quality level to 1
             pcall(function()
                 for i = 1, 10 do
                     UserGameSettings:SetQualityLevel(i)
@@ -1629,13 +1451,10 @@ FPSTab:Toggle({
                 UserGameSettings:SetQualityLevel(1)
             end)
             
-            -- Disable 3D rendering
             RunService:Set3dRenderingEnabled(false)
             
-            -- Reduce physics
             settings().Physics.DeterministicInterpolationStyle = Enum.DeterministicInterpolationStyle.Disabled
         else
-            -- Restore normal settings
             RunService:Set3dRenderingEnabled(true)
             pcall(function()
                 UserGameSettings:SetQualityLevel(5)
@@ -2123,432 +1942,350 @@ VisualTab:Toggle({
     end
 })
 
-VisualTab:Divider()
+local cosmetic1, cosmetic2 = ""  
+VisualTab:Space()  
 
-VisualTab:Section({ Title = "Emote Changer", TextSize = 20 })
-VisualTab:Divider()
+local function normalize(str)    
+    return str:gsub("%s+", ""):lower()    
+end    
 
-for i = 1, 12 do
-   currentEmoteInputs[i] = VisualTab:Input({
-        Title = "Current Emote " .. i,
-        Placeholder = "Enter current emote name",
-        Value = currentEmotes[i],
-        Callback = function(v) 
-            currentEmotes[i] = v:gsub("%s+", "")
-        end
-    })
+local function levenshtein(s, t)    
+    local m, n = #s, #t    
+    local d = {}    
+    for i = 0, m do d[i] = {[0] = i} end    
+    for j = 0, n do d[0][j] = j end    
+
+    for i = 1, m do    
+        for j = 1, n do    
+            local cost = (s:sub(i,i) == t:sub(j,j)) and 0 or 1    
+            d[i][j] = math.min(d[i-1][j] + 1, d[i][j-1] + 1, d[i-1][j-1] + cost)    
+        end    
+    end    
+    return d[m][n]    
+end    
+
+local function similarity(s, t)    
+    local nS, nT = normalize(s), normalize(t)    
+    local dist = levenshtein(nS, nT)    
+    return 1 - dist / math.max(#nS, #nT)    
+end    
+
+local function findSimilar(name)
+    local Cosmetics = ReplicatedStorage:WaitForChild("Items"):WaitForChild("Cosmetics")
+    local bestMatch = nil
+    local bestScore = 0.5    
+    for _, c in ipairs(Cosmetics:GetChildren()) do    
+        local score = similarity(name, c.Name)    
+        if score > bestScore then    
+            bestScore = score    
+            bestMatch = c.Name    
+        end    
+    end    
+    return bestMatch    
 end
 
-VisualTab:Divider()
-
-for i = 1, 12 do
-   selectEmoteInputs[i] = VisualTab:Input({
-        Title = "Select Emote " .. i,
-        Placeholder = "Enter select emote name",
-        Value = selectEmotes[i],
-        Callback = function(v) 
-            selectEmotes[i] = v:gsub("%s+", "")
-        end
-    })
-end
-
-local EmoteOptionInput = VisualTab:Input({
-    Title = "Emote Possible option",
-    Desc = "Higher Value may Broke emote animation recommend Use 1-3",
-    Placeholder = "1",
+VisualTab:Input({  
+    Title = "Current Cosmetic",  
+    Placeholder = "Enter Current Cosmetic",  
     Callback = function(v)
-        local num = tonumber(v) or 1
-        local Players = game:GetService("Players")
-        local player = Players.LocalPlayer
-        
-        local currentNum = num
-        
-        local function setupCharacter(character)
-            if character == player.Character then
-                character:SetAttribute("EmoteNum", currentNum)
-            end
+        if v == "" then
+            cosmetic1 = ""
+            return
         end
         
-        local function monitorCharacter()
-            while true do
-                wait(1)
-                local character = player.Character
-                if character and character:GetAttribute("EmoteNum") ~= currentNum then
-                    character:SetAttribute("EmoteNum", currentNum)
-                end
-            end
+        local match = findSimilar(v)
+        if match then
+            cosmetic1 = match
+            WindUI:Notify({Title = "Cosmetic Changer", Content = "Current: " .. match})
+            else
+            cosmetic1 = ""
+            WindUI:Notify({Title = "Cosmetic Changer", Content = "This cosmetic was not found! "})
+        end
+    end  
+})  
+
+VisualTab:Input({  
+    Title = "Select Cosmetic",  
+    Placeholder = "like Toxic Inf",  
+    Callback = function(v)
+        if v == "" then
+            cosmetic2 = ""
+            return
         end
         
-        if player.Character then
-            setupCharacter(player.Character)
+        local match = findSimilar(v)
+        if match then
+            cosmetic2 = match
+            WindUI:Notify({Title = "Cosmetic Changer", Content = "Select: " .. match})
+        else
+            cosmetic2 = ""
+            WindUI:Notify({Title = "Cosmetic Changer", Content = "This cosmetic was not found! "})
         end
-        
-        player.CharacterAdded:Connect(function(character)
-            wait(1)
-            setupCharacter(character)
-        end)
-        
-        spawn(monitorCharacter)
-    end
+    end  
+})  
+
+VisualTab:Button({  
+    Title = "Apply ",  
+    Callback = function()  
+        pcall(function()  
+            if cosmetic1 == "" or cosmetic2 == "" or cosmetic1 == cosmetic2 then return end  
+
+            local Cosmetics = ReplicatedStorage:WaitForChild("Items"):WaitForChild("Cosmetics")
+
+            local a = Cosmetics:FindFirstChild(cosmetic1)    
+            local b = Cosmetics:FindFirstChild(cosmetic2)    
+            if not a or not b then return end    
+
+            local tempRoot = Instance.new("Folder", Cosmetics)    
+            tempRoot.Name = "__temp_swap_" .. tostring(tick()):gsub("%.", "_")    
+
+            local tempA = Instance.new("Folder", tempRoot)    
+            local tempB = Instance.new("Folder", tempRoot)    
+
+            for _, c in ipairs(a:GetChildren()) do c.Parent = tempA end    
+            for _, c in ipairs(b:GetChildren()) do c.Parent = tempB end    
+
+            for _, c in ipairs(tempA:GetChildren()) do c.Parent = b end    
+            for _, c in ipairs(tempB:GetChildren()) do c.Parent = a end    
+
+            tempRoot:Destroy()
+            
+            WindUI:Notify({Title = "Cosmetic Changer", Content = "Applied successfully!"})
+        end)    
+    end  
 })
 
-local function applyEmoteMappings()
-    local hasAnyEmote = false
+VisualTab:Space()
+
+local Events = ReplicatedStorage:WaitForChild("Events",10)
+local CharacterFolder = Events:WaitForChild("Character",10)
+local EmoteRemote = CharacterFolder:WaitForChild("Emote",10)
+local PassCharacterInfo = CharacterFolder:WaitForChild("PassCharacterInfo",10)
+local remoteSignal = PassCharacterInfo and PassCharacterInfo.OnClientEvent
+
+local currentTag = nil
+local currentEmotes = table.create(6,"")
+local selectEmotes = table.create(6,"")
+local emoteEnabled = table.create(6,false)
+local pendingSlot = nil
+local blockOriginalEmote = false
+local lastNum = nil
+
+local function levenshtein(s1, s2)
+    local len1 = #s1
+    local len2 = #s2
+    local matrix = {}
     
-    for i=1,12 do
-        if currentEmotes[i] ~= "" or selectEmotes[i] ~= "" then
-            hasAnyEmote = true
-            break
+    for i = 0, len1 do
+        matrix[i] = {[0] = i}
+    end
+    
+    for j = 0, len2 do
+        matrix[0][j] = j
+    end
+    
+    for i = 1, len1 do
+        for j = 1, len2 do
+            local cost = (s1:sub(i,i) == s2:sub(j,j)) and 0 or 1
+            matrix[i][j] = math.min(
+                matrix[i-1][j] + 1,
+                matrix[i][j-1] + 1,
+                matrix[i-1][j-1] + cost
+            )
         end
     end
     
-    if not hasAnyEmote then
-        WindUI:Notify({
-            Title="Emote Changer",
-            Content="Please enter your emote",
-            Duration=3
-        })
-        return
-    end
+    return matrix[len1][len2]
+end
+
+local function findBestMatch(input, emotes)
+    local cleanInput = input:gsub("%s+",""):lower()
+    if cleanInput == "" then return nil end
     
-    local function normalizeEmoteName(name)
-        return name:gsub("%s+", ""):lower()
-    end
+    local bestMatch = nil
+    local bestSimilarity = 0
     
-    local function isValidEmote(emoteName)
-        if emoteName == "" then return false, "" end
+    for _, emote in ipairs(emotes:GetChildren()) do
+        local emoteName = emote.Name:gsub("%s+",""):lower()
+        local distance = levenshtein(cleanInput, emoteName)
+        local maxLen = math.max(#cleanInput, #emoteName)
+        local similarity = 1 - (distance / maxLen)
         
-        local normalizedInput = normalizeEmoteName(emoteName)
-        local emotesFolder = game:GetService("ReplicatedStorage"):FindFirstChild("Items")
-        if emotesFolder then
-            emotesFolder = emotesFolder:FindFirstChild("Emotes")
-            if emotesFolder then
-                for _, emoteModule in ipairs(emotesFolder:GetChildren()) do
-                    if emoteModule:IsA("ModuleScript") then
-                        local normalizedEmote = normalizeEmoteName(emoteModule.Name)
-                        if normalizedEmote == normalizedInput then
-                            return true, emoteModule.Name
-                        end
+        if similarity >= 0.5 and similarity > bestSimilarity then
+            bestSimilarity = similarity
+            bestMatch = emote.Name
+        end
+    end
+    
+    return bestMatch
+end
+
+local function setRandom()
+    local c = LocalPlayer.Character
+    if not c then return end
+    local n = math.random(1,3)
+    if n ~= lastNum then
+        lastNum = n
+        c:SetAttribute("EmoteNum",n)
+    end
+end
+
+local function readTagFromFolder(f)
+    if not f then return nil end
+    local a = f:GetAttribute("Tag")
+    if a ~= nil then return a end
+    local o = f:FindFirstChild("Tag")
+    if o and o:IsA("ValueBase") then return o.Value end
+    return nil
+end
+
+local function onRespawn()
+    currentTag = nil
+    pendingSlot = nil
+    task.spawn(function()
+        local start = tick()
+        while tick()-start < 10 do
+            if workspace:FindFirstChild("Game") and workspace.Game:FindFirstChild("Players") then
+                local pf = workspace.Game.Players:FindFirstChild(LocalPlayer.Name)
+                if pf then
+                    currentTag = readTagFromFolder(pf)
+                    if currentTag then
+                        local b = tonumber(currentTag)
+                        if b and b >= 0 and b <= 255 then break else currentTag = nil end
                     end
                 end
             end
+            task.wait(0.5)
         end
-        return false, ""
+    end)
+end
+
+local function fireSelect(slot)
+    if not currentTag then return end
+    local b = tonumber(currentTag)
+    if not b or b < 0 or b > 255 then return end
+    if not selectEmotes[slot] or selectEmotes[slot] == "" then return end
+    local buf = buffer.create(2)
+    buffer.writeu8(buf,0,b)
+    buffer.writeu8(buf,1,17)
+    if remoteSignal then
+        firesignal(remoteSignal,buf,{selectEmotes[slot]})
     end
-    
-    local sameEmoteSlots = {}
-    local missingEmoteSlots = {}
-    local invalidEmoteSlots = {}
-    local successfulSlots = {}
-    
-    for i=1,12 do
-        if currentEmotes[i] ~= "" and selectEmotes[i] ~= "" then
-            local currentValid, currentActual = isValidEmote(currentEmotes[i])
-            local selectValid, selectActual = isValidEmote(selectEmotes[i])
+end
+
+local oldNamecall
+oldNamecall = hookmetamethod(game,"__namecall",function(self,...)
+    local method = getnamecallmethod()
+    local args = {...}
+
+    if method == "FireServer" and self == EmoteRemote and type(args[1]) == "string" then
+        for i = 1,6 do
+            if emoteEnabled[i] and currentEmotes[i] ~= "" and args[1] == currentEmotes[i] then
+                pendingSlot = i
+                blockOriginalEmote = true
+                setRandom()
+
+                task.spawn(function()
+                    task.wait(0.1)
+                    blockOriginalEmote = false
+                    if pendingSlot == i then
+                        pendingSlot = nil
+                        fireSelect(i)
+                    end
+                end)
+
+                if blockOriginalEmote then
+                    return nil
+                end
+            end
+        end
+    end
+
+    return oldNamecall(self,...)
+end)
+
+if LocalPlayer.Character then task.spawn(onRespawn) end
+LocalPlayer.CharacterAdded:Connect(function() task.wait(1) onRespawn() end)
+
+if workspace:FindFirstChild("Game") and workspace.Game:FindFirstChild("Players") then
+    workspace.Game.Players.ChildAdded:Connect(function(child)
+        if child.Name == LocalPlayer.Name then task.wait(0.5) onRespawn() end
+    end)
+    workspace.Game.Players.ChildRemoved:Connect(function(child)
+        if child.Name == LocalPlayer.Name then currentTag = nil pendingSlot = nil end
+    end)
+end
+
+local emoteFolder = ReplicatedStorage.Items.Emotes
+
+for i = 1,6 do
+    VisualTab:Input({
+        Title = "Current Emote "..i,
+        Placeholder = "Enter current emote name",
+        Value = currentEmotes[i],
+        Callback = function(v)
+            if v == "" then
+                currentEmotes[i] = ""
+                return
+            end
             
-            if not currentValid and not selectValid then
-                table.insert(invalidEmoteSlots, {slot = i, currentInvalid = true, currentName = currentEmotes[i], selectInvalid = true, selectName = selectEmotes[i]})
-            elseif not currentValid then
-                table.insert(invalidEmoteSlots, {slot = i, currentInvalid = true, currentName = currentEmotes[i], selectInvalid = false, selectName = selectEmotes[i]})
-            elseif not selectValid then
-                table.insert(invalidEmoteSlots, {slot = i, currentInvalid = false, currentName = currentEmotes[i], selectInvalid = true, selectName = selectEmotes[i]})
-            elseif currentActual:lower() == selectActual:lower() then
-                table.insert(sameEmoteSlots, i)
+            local match = findBestMatch(v, emoteFolder)
+            if match then
+                currentEmotes[i] = match
+                WindUI:Notify({Title = "Emote Changer",Content = "Current "..i..": "..match})
             else
-                table.insert(successfulSlots, {slot = i, current = currentActual, select = selectActual})
-            end
-        elseif currentEmotes[i] ~= "" or selectEmotes[i] ~= "" then
-            table.insert(missingEmoteSlots, i)
-        end
-    end
-    
-    local message = ""
-    
-    if #successfulSlots > 0 then
-        message = message .. "<font color='#00FF00'><stroke color='#000000' width='0.0001'>✓ Successfully applied emote on:</stroke></font>\n"
-        for _, data in ipairs(successfulSlots) do
-            message = message .. "<font color='#00FF00'><stroke color='#000000' width='0.0001'>Slot " .. data.slot .. " Emote: " .. data.current .. " → " .. data.select .. "</stroke></font>\n"
-        end
-        message = message .. "\n"
-    end
-    
-    if #sameEmoteSlots > 0 then
-        message = message .. "<font color='##ff0000'><stroke color='#FFFFFF' width='0.0001'>⚠ Failed to apply emote on:</stroke></font>\n"
-        for _, slot in ipairs(sameEmoteSlots) do
-            message = message .. "<font color='##ff0000'><stroke color='#FFFFFF' width='0.0001'>Slot " .. slot .. " - Cannot change emote with the same name</stroke></font>\n"
-        end
-        message = message .. "\n"
-    end
-    
-    if #invalidEmoteSlots > 0 then
-        message = message .. "<font color='##ff0000'><stroke color='#FFFFFF' width='0.0001'>⚠ Failed to apply emote on:</stroke></font>\n"
-        for _, data in ipairs(invalidEmoteSlots) do
-            message = message .. "<font color='##ff0000'><stroke color='#FFFFFF' width='0.0001'>Slot " .. data.slot .. " - "
-            if data.currentInvalid and data.selectInvalid then
-                message = message .. "Invalid current emote: \"" .. data.currentName .. "\", Invalid select emote: \"" .. data.selectName .. "\"</stroke></font>\n"
-            elseif data.currentInvalid then
-                message = message .. "Invalid current emote: \"" .. data.currentName .. "\", Select emote: \"" .. data.selectName .. "\"</stroke></font>\n"
-            else
-                message = message .. "Current emote: \"" .. data.currentName .. "\", Invalid select emote: \"" .. data.selectName .. "\"</stroke></font>\n"
+                currentEmotes[i] = ""
+                WindUI:Notify({Title = "Emote Changer",Content = "This emote was not found! "..i})
             end
         end
-        message = message .. "\n"
-    end
-    
-    if #missingEmoteSlots > 0 then
-        message = message .. "<font color='##ff0000'><stroke color='#FFFFFF' width='0.0001'>⚠ Failed to apply emote on:</stroke></font>\n"
-        for _, slot in ipairs(missingEmoteSlots) do
-            if currentEmotes[slot] == "" then
-                message = message .. "<font color='##ff0000'><stroke color='#FFFFFF' width='0.0001'>Slot " .. slot .. " - Current emote slot is missing text</stroke></font>\n"
-            else
-                message = message .. "<font color='##ff0000'><stroke color='#FFFFFF' width='0.0001'>Slot " .. slot .. " - Select emote slot is missing text</stroke></font>\n"
-            end
-        end
-    end
-    
-    for i=1,12 do
-        local currentValid = isValidEmote(currentEmotes[i])
-        local selectValid = isValidEmote(selectEmotes[i])
-        emoteEnabled[i] = (currentValid and selectValid and currentEmotes[i]:lower() ~= selectEmotes[i]:lower())
-    end
-    
-    WindUI:Notify({
-        Title="Emote Changer",
-        Content=message,
-        Duration=8
     })
+
+    VisualTab:Input({
+        Title = "Select Emote "..i,
+        Placeholder = "Enter select emote name",
+        Value = selectEmotes[i],
+        Callback = function(v)
+            if v == "" then
+                selectEmotes[i] = ""
+                return
+            end
+            
+            local match = findBestMatch(v, emoteFolder)
+            if match then
+                selectEmotes[i] = match
+                WindUI:Notify({Title = "Emote Changer",Content = "Select "..i..": "..match})
+            else
+                selectEmotes[i] = ""
+                WindUI:Notify({Title = "Emote Changer",Content = "This emote was not found! "..i})
+            end
+        end
+    })
+
+    VisualTab:Button({
+        Title = "Apply "..i,
+        Icon = "solar:arrow-right-line-duotone",
+        Callback = function()
+            emoteEnabled[i] = (currentEmotes[i] ~= "" and selectEmotes[i] ~= "")
+            WindUI:Notify({Title = "Emote Changer",Content = "Slot "..i.." applied!"})
+        end
+    })
+
+    VisualTab:Divider()
 end
 
 VisualTab:Button({
-    Title="Apply Emote Mappings",
-    Icon="check",
-    Callback=applyEmoteMappings
-})
-
-VisualTab:Button({
     Title = "Reset All Emotes",
-    Icon = "trash-2",
+    Icon = "solar:trash-bin-2-linear",
     Callback = function()
-        for i = 1, 12 do
+        for i = 1,6 do
             currentEmotes[i] = ""
             selectEmotes[i] = ""
             emoteEnabled[i] = false
-            
-            if currentEmoteInputs[i] and currentEmoteInputs[i].Set then
-                currentEmoteInputs[i]:Set("")
-            end
-            if selectEmoteInputs[i] and selectEmoteInputs[i].Set then
-                selectEmoteInputs[i]:Set("")
-            end
         end
-        
-        WindUI:Notify({
-            Title = "Emote Changer", 
-            Content = "All emotes have been reset!"
-        })
+        WindUI:Notify({Title = "Emote Changer",Content = "All emotes reset!"})
     end
 })
 
-VisualTab:Divider()
-
-local cosmetic1, cosmetic2 = "" 
-    local originalCosmetic1, originalCosmetic2 = "", ""
-    local isSwapped = false
-    
-    VisualTab:Input({
-        Title = "Current Cosmetics",
-        Placeholder = "",
-        Callback = function(v) 
-            cosmetic1 = v
-            if not isSwapped then
-                originalCosmetic1 = v
-            end
-        end
-    })
-    
-    VisualTab:Input({
-        Title = "Select Cosmetics",
-        Placeholder = "",
-        Callback = function(v) 
-            cosmetic2 = v
-            if not isSwapped then
-                originalCosmetic2 = v
-            end
-        end
-    })
-    
-    VisualTab:Button({
-        Title = "Apply Cosmetics",
-        Callback = function()
-            pcall(function()
-                if cosmetic1 == "" or cosmetic2 == "" or cosmetic1 == cosmetic2 then return end
-                
-                local ReplicatedStorage = game:GetService("ReplicatedStorage")    
-                local Cosmetics = ReplicatedStorage:WaitForChild("Items"):WaitForChild("Cosmetics")    
-                
-                local function normalize(str)    
-                    return str:gsub("%s+", ""):lower()    
-                end    
-                
-                local function levenshtein(s, t)    
-                    local m, n = #s, #t    
-                    local d = {}    
-                    for i = 0, m do d[i] = {[0] = i} end    
-                    for j = 0, n do d[0][j] = j end    
-                    
-                    for i = 1, m do    
-                        for j = 1, n do    
-                            local cost = (s:sub(i,i) == t:sub(j,j)) and 0 or 1    
-                            d[i][j] = math.min(    
-                                d[i-1][j] + 1,    
-                                d[i][j-1] + 1,    
-                                d[i-1][j-1] + cost    
-                            )    
-                        end    
-                    end    
-                    return d[m][n]    
-                end    
-                
-                local function similarity(s, t)    
-                    local nS, nT = normalize(s), normalize(t)    
-                    local dist = levenshtein(nS, nT)    
-                    return 1 - dist / math.max(#nS, #nT)    
-                end    
-                
-                local function findSimilar(name)    
-                    local bestMatch = name    
-                    local bestScore = 0.5    
-                    for _, c in ipairs(Cosmetics:GetChildren()) do    
-                        local score = similarity(name, c.Name)    
-                        if score > bestScore then    
-                            bestScore = score    
-                            bestMatch = c.Name    
-                        end    
-                    end    
-                    return bestMatch    
-                end    
-                
-                cosmetic1 = findSimilar(cosmetic1)    
-                cosmetic2 = findSimilar(cosmetic2)    
-                
-                local a = Cosmetics:FindFirstChild(cosmetic1)    
-                local b = Cosmetics:FindFirstChild(cosmetic2)    
-                if not a or not b then return end    
-                
-                -- Store original names before swapping
-                if not isSwapped then
-                    originalCosmetic1 = cosmetic1
-                    originalCosmetic2 = cosmetic2
-                end
-                
-                local tempRoot = Instance.new("Folder", Cosmetics)    
-                tempRoot.Name = "__temp_swap_" .. tostring(tick()):gsub("%.", "_")    
-                
-                local tempA = Instance.new("Folder", tempRoot)    
-                local tempB = Instance.new("Folder", tempRoot)    
-                
-                for _, c in ipairs(a:GetChildren()) do c.Parent = tempA end    
-                for _, c in ipairs(b:GetChildren()) do c.Parent = tempB end    
-                
-                for _, c in ipairs(tempA:GetChildren()) do c.Parent = b end    
-                for _, c in ipairs(tempB:GetChildren()) do c.Parent = a end    
-                
-                tempRoot:Destroy()
-                
-                isSwapped = true
-                
-                WindUI:Notify({
-                    Title = "Cosmetics Changer",
-                    Content = "Successfully swapped " .. cosmetic1 .. " with " .. cosmetic2,
-                    Duration = 3
-                })
-            end)    
-        end
-    })
-    
-    VisualTab:Button({
-        Title = "Reset Cosmetics",
-        Desc = "Restore cosmetics to their original state",
-        Callback = function()
-            pcall(function()
-                if not isSwapped then
-                    WindUI:Notify({
-                        Title = "Cosmetics Changer",
-                        Content = "No cosmetics have been swapped yet",
-                        Duration = 3
-                    })
-                    return
-                end
-                
-                if originalCosmetic1 == "" or originalCosmetic2 == "" then
-                    WindUI:Notify({
-                        Title = "Cosmetics Changer",
-                        Content = "Original cosmetic names not found",
-                        Duration = 3
-                    })
-                    return
-                end
-                
-                local ReplicatedStorage = game:GetService("ReplicatedStorage")    
-                local Cosmetics = ReplicatedStorage:WaitForChild("Items"):WaitForChild("Cosmetics")    
-                
-                local function normalize(str)    
-                    return str:gsub("%s+", ""):lower()    
-                end    
-                
-                local function findSimilar(name)    
-                    local bestMatch = name    
-                    local bestScore = 0.5    
-                    for _, c in ipairs(Cosmetics:GetChildren()) do    
-                        local normalizedInput = normalize(name)
-                        local normalizedCosmetic = normalize(c.Name)
-                        if normalizedInput == normalizedCosmetic then
-                            return c.Name
-                        end
-                    end    
-                    return name
-                end    
-                
-                local resetCosmetic1 = findSimilar(originalCosmetic1)
-                local resetCosmetic2 = findSimilar(originalCosmetic2)
-                
-                local a = Cosmetics:FindFirstChild(cosmetic1)    
-                local b = Cosmetics:FindFirstChild(cosmetic2)    
-                
-                -- Only reset if we can find both cosmetics
-                if a and b then
-                    local tempRoot = Instance.new("Folder", Cosmetics)    
-                    tempRoot.Name = "__temp_reset_" .. tostring(tick()):gsub("%.", "_")    
-                    
-                    local tempA = Instance.new("Folder", tempRoot)    
-                    local tempB = Instance.new("Folder", tempRoot)    
-                    
-                    for _, c in ipairs(a:GetChildren()) do c.Parent = tempA end    
-                    for _, c in ipairs(b:GetChildren()) do c.Parent = tempB end    
-                    
-                    for _, c in ipairs(tempA:GetChildren()) do c.Parent = b end    
-                    for _, c in ipairs(tempB:GetChildren()) do c.Parent = a end    
-                    
-                    tempRoot:Destroy()
-                    
-                    isSwapped = false
-                    
-                    WindUI:Notify({
-                        Title = "Cosmetics Changer",
-                        Content = "Successfully reset cosmetics to original state",
-                        Duration = 3
-                    })
-                else
-                    WindUI:Notify({
-                        Title = "Cosmetics Changer",
-                        Content = "Could not find swapped cosmetics to reset",
-                        Duration = 3
-                    })
-                end
-            end)
-        end
-    }) 
-  
 VisualTab:Divider()
 
 VisualTab:Input({
@@ -2756,14 +2493,14 @@ game:GetService("Players").PlayerRemoving:Connect(function(player)
         end
         
         if AutoTicketFarmConnection then
-    AutoTicketFarmConnection:Disconnect()
-    AutoTicketFarmConnection = nil
+            AutoTicketFarmConnection:Disconnect()
+            AutoTicketFarmConnection = nil
         end
         
         if FeatureStates.AutoMoneyFarmConnection then
-    FeatureStates.AutoMoneyFarmConnection:Disconnect()
-    FeatureStates.AutoMoneyFarmConnection = nil
-       end
+            FeatureStates.AutoMoneyFarmConnection:Disconnect()
+            FeatureStates.AutoMoneyFarmConnection = nil
+        end
         
         if ScreenStretchConn then
             ScreenStretchConn:Disconnect()
@@ -2774,7 +2511,6 @@ game:GetService("Players").PlayerRemoving:Connect(function(player)
             AutoCarryConnection:Disconnect()
         end
         
-        -- Front Jump cleanup
         if frontJumpVelocity then
             frontJumpVelocity:Destroy()
             frontJumpVelocity = nil
