@@ -657,7 +657,9 @@ PlayerTab:Input({
     end
 })
 
---AutoTrimp Logic
+PlayerTab:Divider({Title = "AutoTrimp"})
+
+-- AutoTrimp Logic
 local AutoTrimpEnabled = false
 local AutoTrimpSpeed = 50
 local maxExtraSpeed = 100
@@ -670,8 +672,6 @@ local activeBV = nil
 local currentSpeed = AutoTrimpSpeed
 local countingEnabled = false
 local speedometer = nil
-
--- Connections
 local AutoTrimpConnections = {}
 
 local function truncate1Decimal(val)
@@ -680,27 +680,17 @@ end
 
 local function getSpeedometer()
     local ok, spd = pcall(function()
-        return player.PlayerGui.Shared.HUD.Overlay.Default.CharacterInfo.Item.Speedometer.Players
+        return LocalPlayer.PlayerGui.Shared.HUD.Overlay.Default.CharacterInfo.Item.Speedometer.Players
     end)
     if ok then return spd end
     return nil
-end
-
-local oldNewIndex
-if not oldNewIndex then
-    oldNewIndex = hookmetamethod(game, "__newindex", function(self, idx, val)
-        if not checkcaller() and countingEnabled and speedometer and self == speedometer and idx == "Text" then
-            return
-        end
-        return oldNewIndex(self, idx, val)
-    end)
 end
 
 local function handleAutoTrimp()
     local deltaTime = tick() - lastTick
     lastTick = tick()
 
-    local char = player.Character
+    local char = LocalPlayer.Character
     if not char then return end
     
     local root = char:FindFirstChild("HumanoidRootPart")
@@ -712,7 +702,9 @@ local function handleAutoTrimp()
     
     if wasAir and not isAir then
         currentSpeed = math.max(AutoTrimpSpeed - minSpeedOffset, currentSpeed - 10)
-        if speedometer then speedometer.Text = tostring(truncate1Decimal(currentSpeed)) end
+        if speedometer then 
+            speedometer.Text = tostring(truncate1Decimal(currentSpeed)) 
+        end
         airTotalTime = 0
     end
     wasAir = isAir
@@ -732,9 +724,12 @@ local function handleAutoTrimp()
             airTotalTime = 0
         end
         
-        if activeBV then activeBV:Destroy() end
+        if activeBV then 
+            activeBV:Destroy() 
+            activeBV = nil
+        end
         
-        local lookDir = camera.CFrame.LookVector
+        local lookDir = Camera.CFrame.LookVector
         lookDir = Vector3.new(lookDir.X, 0, lookDir.Z)
         if lookDir.Magnitude ~= 0 then
             lookDir = lookDir.Unit
@@ -749,10 +744,14 @@ local function handleAutoTrimp()
         activeBV = bv
         
         countingEnabled = true
-        if speedometer then speedometer.Text = tostring(truncate1Decimal(currentSpeed)) end
+        if speedometer then 
+            speedometer.Text = tostring(truncate1Decimal(currentSpeed)) 
+        end
     else
-        if activeBV then activeBV:Destroy() end
-        activeBV = nil
+        if activeBV then 
+            activeBV:Destroy() 
+            activeBV = nil
+        end
         currentSpeed = AutoTrimpSpeed
         countingEnabled = false
         airAccumulator = 0
@@ -781,9 +780,6 @@ local function AutoTrimpCleanup()
     airTotalTime = 0
     wasAir = false
 end
-
--- Tambah AutoTrimp ke PlayerTab (sebelum atau sesudah Front Jump)
-PlayerTab:Divider({Title = "AutoTrimp"})
 
 PlayerTab:Toggle({
     Title = "AutoTrimp",
@@ -834,15 +830,15 @@ PlayerTab:Input({
 })
 
 -- Tambahkan event cleanup
-player.CharacterRemoving:Connect(function()
+LocalPlayer.CharacterRemoving:Connect(function()
     if activeBV then
         activeBV:Destroy()
         activeBV = nil
     end
 end)
 
-player.PlayerRemoving:Connect(function(plr)
-    if plr == player then
+LocalPlayer.PlayerRemoving:Connect(function(plr)
+    if plr == LocalPlayer then
         AutoTrimpCleanup()
     end
 end)
