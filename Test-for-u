@@ -88,6 +88,7 @@ local FeatureStates = {
     FrontAutoJumpEnabled = true,
     AutoTicketFarm = false,
     AutoMoneyFarm = false,
+    AutoTrimpEnabled = false,
 }
 
 local Window = WindUI:CreateWindow({
@@ -2698,6 +2699,11 @@ game:GetService("Players").PlayerRemoving:Connect(function(player)
         
         if AutoCarryConnection then
             AutoCarryConnection:Disconnect()
+        end
+
+        if AutoTrimpVelocity then
+            AutoTrimpVelocity:Destroy()
+            AutoTrimpVelocity = nil
         end
         
         if frontJumpVelocity then
