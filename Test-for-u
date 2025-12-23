@@ -1,5 +1,5 @@
-local WindUI = loadstring(game:HttpGet("https://raw.githubusercontent.com/Footagesus/WindUI/main/dist/main.lua"))()
-WindUI:SetTheme("Plant")
+getgenv().WindUI = loadstring(game:HttpGet("https://raw.githubusercontent.com/Footagesus/WindUI/main/dist/main.lua"))()
+getgenv().WindUI:SetTheme("Plant")
 
 local Confirmed = false
 
@@ -20,7 +20,7 @@ function gradient(text, startColor, endColor)
     return result
 end
 
-WindUI:Popup({
+getgenv().WindUI:Popup({
     Title = "Welcome to my script!",
     Icon = "console",
     IconThemed = true,
@@ -54,14 +54,14 @@ end
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local Debris = game:GetService("Debris")
-local TweenService = game:GetState("TweenService")
+local TweenService = game:GetService("TweenService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local UserInputService = game:GetService("UserInputService")
 local LocalPlayer = Players.LocalPlayer
 local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
 local Camera = workspace.CurrentCamera
 
-local FeatureStates = {
+getgenv().FeatureStates = {
     SelfReviveMethod = "Spawnpoint",
     AutoSelfRevive = false,
     TimerDisplay = false,
@@ -89,9 +89,10 @@ local FeatureStates = {
     AutoTicketFarm = false,
     AutoMoneyFarm = false,
     AutoTrimpEnabled = false,
+    AntiAFK = true,
 }
 
-local Window = WindUI:CreateWindow({
+local Window = getgenv().WindUI:CreateWindow({
     Title = "WeroShiny (Beta)",
     Icon = "gamepad",
     Author = "Pnsdg, t.me/ItsYomka and Syfta",
@@ -108,12 +109,12 @@ local EspTab = Window:Tab({Title = "Esp", Icon = "star"})
 local VisualTab = Window:Tab({Title = "Visual", Icon = "smile"})
 local SettingsTab = Window:Tab({Title = "Settings", Icon = "user"})
 
-local featureToggles = {}
+getgenv().featureToggles = {}
 
 local function createFeatureToggle(name, initialState, yPosition, toggleCallback)
-    if featureToggles[name] and featureToggles[name].Gui then
-        featureToggles[name].Gui:Destroy()
-        featureToggles[name] = nil
+    if getgenv().featureToggles[name] and getgenv().featureToggles[name].Gui then
+        getgenv().featureToggles[name].Gui:Destroy()
+        getgenv().featureToggles[name] = nil
     end
     
     local screenGui = Instance.new("ScreenGui")
@@ -191,7 +192,7 @@ local function createFeatureToggle(name, initialState, yPosition, toggleCallback
         end
     end)
     
-    featureToggles[name] = {
+    getgenv().featureToggles[name] = {
         Gui = screenGui,
         UpdateState = function(newState)
             initialState = newState
@@ -199,18 +200,18 @@ local function createFeatureToggle(name, initialState, yPosition, toggleCallback
         end
     }
     
-    return featureToggles[name]
+    return getgenv().featureToggles[name]
 end
 
 -- ================================
 -- FRONT JUMP SYSTEM
 -- ================================
-local frontJumpVelocity = nil
+getgenv().frontJumpVelocity = nil
 
 local function startFrontJump()
-    if frontJumpVelocity then 
-        frontJumpVelocity:Destroy() 
-        frontJumpVelocity = nil 
+    if getgenv().frontJumpVelocity then 
+        getgenv().frontJumpVelocity:Destroy() 
+        getgenv().frontJumpVelocity = nil 
     end
     
     local char = LocalPlayer.Character
@@ -222,14 +223,14 @@ local function startFrontJump()
     local root = char:FindFirstChild("HumanoidRootPart")
     if not root then return end
 
-    frontJumpVelocity = Instance.new("BodyVelocity")
-    frontJumpVelocity.MaxForce = Vector3.new(400000, 0, 400000)
-    frontJumpVelocity.P = 1250
-    frontJumpVelocity.Velocity = Vector3.new(0, 0, 0)
-    frontJumpVelocity.Parent = root
+    getgenv().frontJumpVelocity = Instance.new("BodyVelocity")
+    getgenv().frontJumpVelocity.MaxForce = Vector3.new(400000, 0, 400000)
+    getgenv().frontJumpVelocity.P = 1250
+    getgenv().frontJumpVelocity.Velocity = Vector3.new(0, 0, 0)
+    getgenv().frontJumpVelocity.Parent = root
 
     task.spawn(function()
-        while FeatureStates.FrontJumpEnabled and frontJumpVelocity and frontJumpVelocity.Parent do
+        while getgenv().FeatureStates.FrontJumpEnabled and getgenv().frontJumpVelocity and getgenv().frontJumpVelocity.Parent do
             local cam = workspace.CurrentCamera
             if cam and root then
                 local forward = cam.CFrame.LookVector
@@ -238,10 +239,10 @@ local function startFrontJump()
                     direction = direction.Unit 
                 end
                 
-                local targetVelocity = direction * FeatureStates.FrontJumpSpeed
-                frontJumpVelocity.Velocity = targetVelocity
+                local targetVelocity = direction * getgenv().FeatureStates.FrontJumpSpeed
+                getgenv().frontJumpVelocity.Velocity = targetVelocity
                 
-                if FeatureStates.FrontAutoJumpEnabled and humanoid and humanoid:GetState() ~= Enum.HumanoidStateType.Jumping then
+                if getgenv().FeatureStates.FrontAutoJumpEnabled and humanoid and humanoid:GetState() ~= Enum.HumanoidStateType.Jumping then
                     local rayOrigin = root.Position
                     local rayDir = Vector3.new(0, -4, 0)
                     local ray = Ray.new(rayOrigin, rayDir)
@@ -255,41 +256,40 @@ local function startFrontJump()
             task.wait(0.016)
         end
         
-        if frontJumpVelocity then 
-            frontJumpVelocity:Destroy() 
-            frontJumpVelocity = nil 
+        if getgenv().frontJumpVelocity then 
+            getgenv().frontJumpVelocity:Destroy() 
+            getgenv().frontJumpVelocity = nil 
         end
     end)
 end
 
 local function handleFrontJumpToggle(newState)
-    FeatureStates.FrontJumpEnabled = newState
+    getgenv().FeatureStates.FrontJumpEnabled = newState
     
     if newState then
         startFrontJump()
     else
-        if frontJumpVelocity then
-            frontJumpVelocity:Destroy()
-            frontJumpVelocity = nil
+        if getgenv().frontJumpVelocity then
+            getgenv().frontJumpVelocity:Destroy()
+            getgenv().frontJumpVelocity = nil
         end
     end
 end
 
--- Add Front Jump to PlayerTab
 PlayerTab:Toggle({
     Title = "Front Jump",
     Value = false,
     Callback = function(state)
         handleFrontJumpToggle(state)
-        if state and not featureToggles["Front Jump"] then
-            featureToggles["Front Jump"] = createFeatureToggle("Front Jump", state, 0.1, function(newState)
+        if state and not getgenv().featureToggles["Front Jump"] then
+            getgenv().featureToggles["Front Jump"] = createFeatureToggle("Front Jump", state, 0.1, function(newState)
                 handleFrontJumpToggle(newState)
             end)
         end
-        if featureToggles["Front Jump"] then
-            featureToggles["Front Jump"].Gui.Enabled = state
-            if featureToggles["Front Jump"].UpdateState then
-                featureToggles["Front Jump"].UpdateState(state)
+        if getgenv().featureToggles["Front Jump"] then
+            getgenv().featureToggles["Front Jump"].Gui.Enabled = state
+            if getgenv().featureToggles["Front Jump"].UpdateState then
+                getgenv().featureToggles["Front Jump"].UpdateState(state)
             end
         end
     end
@@ -303,7 +303,7 @@ PlayerTab:Input({
     Callback = function(input)
         local val = tonumber(input)
         if val and val > 0 and val <= 500 then
-            FeatureStates.FrontJumpSpeed = val
+            getgenv().FeatureStates.FrontJumpSpeed = val
         end
     end
 })
@@ -312,14 +312,11 @@ PlayerTab:Toggle({
     Title = "Auto Jump with Front Jump",
     Value = true,
     Callback = function(state)
-        FeatureStates.FrontAutoJumpEnabled = state
+        getgenv().FeatureStates.FrontAutoJumpEnabled = state
     end
 })
 
 PlayerTab:Divider()
--- ================================
--- END OF FRONT JUMP SYSTEM
--- ================================
 
 local lastSavedPosition = nil
 local respawnConnection = nil
@@ -376,7 +373,7 @@ PlayerTab:Toggle({
     Title = "Auto Self Revive",
     Value = false,
     Callback = function(state)
-        FeatureStates.AutoSelfRevive = state
+        getgenv().FeatureStates.AutoSelfRevive = state
         
         if AutoSelfReviveConnection then
             AutoSelfReviveConnection:Disconnect()
@@ -398,14 +395,14 @@ PlayerTab:Toggle({
             if not character then return end
             
             AutoSelfReviveConnection = character:GetAttributeChangedSignal("Downed"):Connect(function()
-                if not FeatureStates.AutoSelfRevive then return end
+                if not getgenv().FeatureStates.AutoSelfRevive then return end
                 
                 local isDowned = character:GetAttribute("Downed")
                 if isDowned then
                     local hrp = character:FindFirstChild("HumanoidRootPart")
-                    if FeatureStates.SelfReviveMethod == "Spawnpoint" then
+                    if getgenv().FeatureStates.SelfReviveMethod == "Spawnpoint" then
                         reviveAtSpawnpoint()
-                    elseif FeatureStates.SelfReviveMethod == "Fake Revive" then
+                    elseif getgenv().FeatureStates.SelfReviveMethod == "Fake Revive" then
                         reviveAtPosition(character, hrp)
                     end
                 end
@@ -429,7 +426,7 @@ PlayerTab:Dropdown({
     Values = {"Spawnpoint", "Fake Revive"},
     Value = "Spawnpoint",
     Callback = function(value)
-        FeatureStates.SelfReviveMethod = value
+        getgenv().FeatureStates.SelfReviveMethod = value
     end
 })
 
@@ -516,10 +513,10 @@ PlayerTab:Input({
 
 PlayerTab:Divider()
 
-local slideFrictionValue = -8
-local movementTables = {}
-local infiniteSlideHeartbeat = nil
-local infiniteSlideCharacterConn = nil
+getgenv().slideFrictionValue = -8
+getgenv().movementTables = {}
+getgenv().infiniteSlideHeartbeat = nil
+getgenv().infiniteSlideCharacterConn = nil
 
 local requiredKeys = {
     "Friction","AirStrafeAcceleration","JumpHeight","RunDeaccel",
@@ -536,17 +533,17 @@ local function hasRequiredFields(tbl)
 end
 
 local function findMovementTables()
-    movementTables = {}
+    getgenv().movementTables = {}
     for _, obj in ipairs(getgc(true)) do
         if hasRequiredFields(obj) then
-            table.insert(movementTables, obj)
+            table.insert(getgenv().movementTables, obj)
         end
     end
-    return #movementTables > 0
+    return #getgenv().movementTables > 0
 end
 
 local function setSlideFriction(value)
-    for _, tbl in ipairs(movementTables) do
+    for _, tbl in ipairs(getgenv().movementTables) do
         pcall(function()
             tbl.Friction = value
         end)
@@ -564,21 +561,21 @@ local function getPlayerModel()
 end
 
 local function infiniteSlideHeartbeatFunc()
-    if not FeatureStates.InfiniteSlide then return end
+    if not getgenv().FeatureStates.InfiniteSlide then return end
     
     local playerModel = getPlayerModel()
     if not playerModel then return end
     
     local state = playerModel:GetAttribute("State")
     if state == "Slide" or state == "EmotingSlide" then
-        setSlideFriction(slideFrictionValue)
+        setSlideFriction(getgenv().slideFrictionValue)
     else
         setSlideFriction(5)
     end
 end
 
 local function onCharacterAddedSlide()
-    if not FeatureStates.InfiniteSlide then return end
+    if not getgenv().FeatureStates.InfiniteSlide then return end
     
     for i = 1, 10 do
         task.wait(0.5)
@@ -589,36 +586,36 @@ local function onCharacterAddedSlide()
 end
 
 local function setInfiniteSlide(enabled)
-    FeatureStates.InfiniteSlide = enabled
+    getgenv().FeatureStates.InfiniteSlide = enabled
     
     if enabled then
         findMovementTables()
         
-        if not infiniteSlideCharacterConn then
-            infiniteSlideCharacterConn = LocalPlayer.CharacterAdded:Connect(onCharacterAddedSlide)
+        if not getgenv().infiniteSlideCharacterConn then
+            getgenv().infiniteSlideCharacterConn = LocalPlayer.CharacterAdded:Connect(onCharacterAddedSlide)
         end
         
         if LocalPlayer.Character then
             task.spawn(onCharacterAddedSlide)
         end
         
-        if infiniteSlideHeartbeat then
-            infiniteSlideHeartbeat:Disconnect()
+        if getgenv().infiniteSlideHeartbeat then
+            getgenv().infiniteSlideHeartbeat:Disconnect()
         end
-        infiniteSlideHeartbeat = RunService.Heartbeat:Connect(infiniteSlideHeartbeatFunc)
+        getgenv().infiniteSlideHeartbeat = RunService.Heartbeat:Connect(infiniteSlideHeartbeatFunc)
     else
-        if infiniteSlideHeartbeat then
-            infiniteSlideHeartbeat:Disconnect()
-            infiniteSlideHeartbeat = nil
+        if getgenv().infiniteSlideHeartbeat then
+            getgenv().infiniteSlideHeartbeat:Disconnect()
+            getgenv().infiniteSlideHeartbeat = nil
         end
         
-        if infiniteSlideCharacterConn then
-            infiniteSlideCharacterConn:Disconnect()
-            infiniteSlideCharacterConn = nil
+        if getgenv().infiniteSlideCharacterConn then
+            getgenv().infiniteSlideCharacterConn:Disconnect()
+            getgenv().infiniteSlideCharacterConn = nil
         end
         
         setSlideFriction(5)
-        movementTables = {}
+        getgenv().movementTables = {}
     end
 end
 
@@ -627,15 +624,15 @@ PlayerTab:Toggle({
     Value = false,
     Callback = function(state)
         setInfiniteSlide(state)
-        if state and not featureToggles["Inf Slide"] then
-            featureToggles["Inf Slide"] = createFeatureToggle("Inf Slide", state, 0.25, function(newState)
+        if state and not getgenv().featureToggles["Inf Slide"] then
+            getgenv().featureToggles["Inf Slide"] = createFeatureToggle("Inf Slide", state, 0.25, function(newState)
                 setInfiniteSlide(newState)
             end)
         end
-        if featureToggles["Inf Slide"] then
-            featureToggles["Inf Slide"].Gui.Enabled = state
-            if featureToggles["Inf Slide"].UpdateState then
-                featureToggles["Inf Slide"].UpdateState(state)
+        if getgenv().featureToggles["Inf Slide"] then
+            getgenv().featureToggles["Inf Slide"].Gui.Enabled = state
+            if getgenv().featureToggles["Inf Slide"].UpdateState then
+                getgenv().featureToggles["Inf Slide"].UpdateState(state)
             end
         end
     end
@@ -650,30 +647,30 @@ PlayerTab:Input({
     Callback = function(value)
         local num = tonumber(value)
         if num and num < 0 then
-            slideFrictionValue = num
-            if FeatureStates.InfiniteSlide then
-                setSlideFriction(slideFrictionValue)
+            getgenv().slideFrictionValue = num
+            if getgenv().FeatureStates.InfiniteSlide then
+                setSlideFriction(getgenv().slideFrictionValue)
             end
         end
     end
 })
 
-PlayerTab:Divider({Title = "AutoTrimp"})
+PlayerTab:Divider()
 
 -- AutoTrimp Logic
-local AutoTrimpEnabled = false
-local AutoTrimpSpeed = 50
-local maxExtraSpeed = 100
-local minSpeedOffset = 0
-local lastTick = tick()
-local airAccumulator = 0
-local airTotalTime = 0
-local wasAir = false
-local activeBV = nil
-local currentSpeed = AutoTrimpSpeed
-local countingEnabled = false
-local speedometer = nil
-local AutoTrimpConnections = {}
+getgenv().AutoTrimpEnabled = false
+getgenv().AutoTrimpSpeed = 50
+getgenv().maxExtraSpeed = 100
+getgenv().minSpeedOffset = 0
+getgenv().lastTick = tick()
+getgenv().airAccumulator = 0
+getgenv().airTotalTime = 0
+getgenv().wasAir = false
+getgenv().activeBV = nil
+getgenv().currentSpeed = getgenv().AutoTrimpSpeed
+getgenv().countingEnabled = false
+getgenv().speedometer = nil
+getgenv().AutoTrimpConnections = {}
 
 local function truncate1Decimal(val)
     return math.floor(val * 10) / 10
@@ -688,8 +685,8 @@ local function getSpeedometer()
 end
 
 local function handleAutoTrimp()
-    local deltaTime = tick() - lastTick
-    lastTick = tick()
+    local deltaTime = tick() - getgenv().lastTick
+    getgenv().lastTick = tick()
 
     local char = LocalPlayer.Character
     if not char then return end
@@ -698,36 +695,36 @@ local function handleAutoTrimp()
     local humanoid = char:FindFirstChild("Humanoid")
     if not root or not humanoid then return end
     
-    speedometer = getSpeedometer()
+    getgenv().speedometer = getSpeedometer()
     local isAir = humanoid.FloorMaterial == Enum.Material.Air
     
-    if wasAir and not isAir then
-        currentSpeed = math.max(AutoTrimpSpeed - minSpeedOffset, currentSpeed - 10)
-        if speedometer then 
-            speedometer.Text = tostring(truncate1Decimal(currentSpeed)) 
+    if getgenv().wasAir and not isAir then
+        getgenv().currentSpeed = math.max(getgenv().AutoTrimpSpeed - getgenv().minSpeedOffset, getgenv().currentSpeed - 10)
+        if getgenv().speedometer then 
+            getgenv().speedometer.Text = tostring(truncate1Decimal(getgenv().currentSpeed)) 
         end
-        airTotalTime = 0
+        getgenv().airTotalTime = 0
     end
-    wasAir = isAir
+    getgenv().wasAir = isAir
     
-    if AutoTrimpEnabled then
+    if getgenv().AutoTrimpEnabled then
         if isAir then
-            airAccumulator = airAccumulator + deltaTime
-            airTotalTime = airTotalTime + deltaTime
-            while airAccumulator >= 0.04 do
-                airAccumulator = airAccumulator - 0.04
+            getgenv().airAccumulator = getgenv().airAccumulator + deltaTime
+            getgenv().airTotalTime = getgenv().airTotalTime + deltaTime
+            while getgenv().airAccumulator >= 0.04 do
+                getgenv().airAccumulator = getgenv().airAccumulator - 0.04
                 local increment = math.max(0.1, 2.5 * (0.04 / 1))
-                currentSpeed = math.min(AutoTrimpSpeed + maxExtraSpeed, currentSpeed + increment)
+                getgenv().currentSpeed = math.min(getgenv().AutoTrimpSpeed + getgenv().maxExtraSpeed, getgenv().currentSpeed + increment)
             end
         else
-            airAccumulator = 0
-            currentSpeed = math.max(AutoTrimpSpeed - minSpeedOffset, currentSpeed - 4 * deltaTime)
-            airTotalTime = 0
+            getgenv().airAccumulator = 0
+            getgenv().currentSpeed = math.max(getgenv().AutoTrimpSpeed - getgenv().minSpeedOffset, getgenv().currentSpeed - 4 * deltaTime)
+            getgenv().airTotalTime = 0
         end
         
-        if activeBV then 
-            activeBV:Destroy() 
-            activeBV = nil
+        if getgenv().activeBV then 
+            getgenv().activeBV:Destroy() 
+            getgenv().activeBV = nil
         end
         
         local lookDir = Camera.CFrame.LookVector
@@ -737,67 +734,64 @@ local function handleAutoTrimp()
         end
         
         local bv = Instance.new("BodyVelocity")
-        bv.Velocity = lookDir * currentSpeed
+        bv.Velocity = lookDir * getgenv().currentSpeed
         bv.MaxForce = Vector3.new(4e5, 0, 4e5)
         bv.P = 1250
         bv.Parent = root
         Debris:AddItem(bv, 0.1)
-        activeBV = bv
+        getgenv().activeBV = bv
         
-        countingEnabled = true
-        if speedometer then 
-            speedometer.Text = tostring(truncate1Decimal(currentSpeed)) 
+        getgenv().countingEnabled = true
+        if getgenv().speedometer then 
+            getgenv().speedometer.Text = tostring(truncate1Decimal(getgenv().currentSpeed)) 
         end
     else
-        if activeBV then 
-            activeBV:Destroy() 
-            activeBV = nil
+        if getgenv().activeBV then 
+            getgenv().activeBV:Destroy() 
+            getgenv().activeBV = nil
         end
-        currentSpeed = AutoTrimpSpeed
-        countingEnabled = false
-        airAccumulator = 0
-        airTotalTime = 0
-        wasAir = false
+        getgenv().currentSpeed = getgenv().AutoTrimpSpeed
+        getgenv().countingEnabled = false
+        getgenv().airAccumulator = 0
+        getgenv().airTotalTime = 0
+        getgenv().wasAir = false
     end
 end
 
 local function AutoTrimpCleanup()
-    for _, conn in pairs(AutoTrimpConnections) do
+    for _, conn in pairs(getgenv().AutoTrimpConnections) do
         if conn then
             conn:Disconnect()
         end
     end
-    AutoTrimpConnections = {}
+    getgenv().AutoTrimpConnections = {}
     
-    if activeBV then
-        activeBV:Destroy()
-        activeBV = nil
+    if getgenv().activeBV then
+        getgenv().activeBV:Destroy()
+        getgenv().activeBV = nil
     end
     
-    AutoTrimpEnabled = false
-    currentSpeed = AutoTrimpSpeed
-    countingEnabled = false
-    airAccumulator = 0
-    airTotalTime = 0
-    wasAir = false
+    getgenv().currentSpeed = getgenv().AutoTrimpSpeed
+    getgenv().countingEnabled = false
+    getgenv().airAccumulator = 0
+    getgenv().airTotalTime = 0
+    getgenv().wasAir = false
 end
 
 PlayerTab:Toggle({
     Title = "AutoTrimp",
     Value = false,
     Callback = function(state)
-        AutoTrimpEnabled = state
+        getgenv().AutoTrimpEnabled = state
         
         if state then
-            -- Start AutoTrimp connection
-            AutoTrimpConnections["RenderStepped"] = RunService.RenderStepped:Connect(handleAutoTrimp)
+            getgenv().AutoTrimpConnections["RenderStepped"] = RunService.RenderStepped:Connect(handleAutoTrimp)
             
-            -- Create toggle GUI
-            if not featureToggles["AutoTrimp"] then
-                featureToggles["AutoTrimp"] = createFeatureToggle("AutoTrimp", state, 0.15, function(newState)
-                    AutoTrimpEnabled = newState
+            if not getgenv().featureToggles["AutoTrimp"] then
+                getgenv().featureToggles["AutoTrimp"] = createFeatureToggle("AutoTrimp", state, 0.15, function(newState)
+                    getgenv().AutoTrimpEnabled = newState
                     if newState then
-                        AutoTrimpConnections["RenderStepped"] = RunService.RenderStepped:Connect(handleAutoTrimp)
+                        getgenv().AutoTrimpConnections["RenderStepped"] = RunService.RenderStepped:Connect(handleAutoTrimp)
                     else
                         AutoTrimpCleanup()
                     end
@@ -807,11 +801,10 @@ PlayerTab:Toggle({
             AutoTrimpCleanup()
         end
         
-        -- Update toggle GUI
-        if featureToggles["AutoTrimp"] then
-            featureToggles["AutoTrimp"].Gui.Enabled = state
-            if featureToggles["AutoTrimp"].UpdateState then
-                featureToggles["AutoTrimp"].UpdateState(state)
+        if getgenv().featureToggles["AutoTrimp"] then
+            getgenv().featureToggles["AutoTrimp"].Gui.Enabled = state
+            if getgenv().featureToggles["AutoTrimp"].UpdateState then
+                getgenv().featureToggles["AutoTrimp"].UpdateState(state)
             end
         end
     end
@@ -824,30 +817,23 @@ PlayerTab:Input({
     Callback = function(value)
         local num = tonumber(value)
         if num and num > 0 then
-            AutoTrimpSpeed = num
-            currentSpeed = num
+            getgenv().AutoTrimpSpeed = num
+            getgenv().currentSpeed = num
         end
     end
 })
 
--- Tambahkan event cleanup
 LocalPlayer.CharacterRemoving:Connect(function()
-    if activeBV then
-        activeBV:Destroy()
-        activeBV = nil
-    end
-end)
-
-LocalPlayer.PlayerRemoving:Connect(function(plr)
-    if plr == LocalPlayer then
-        AutoTrimpCleanup()
+    if getgenv().activeBV then
+        getgenv().activeBV:Destroy()
+        getgenv().activeBV = nil
     end
 end)
 
 PlayerTab:Divider()
 
 local autoJumpType = "Bounce"
-local bhopHoldActive = false
+getgenv().bhopHoldActive = false
 local jumpCooldown = 0.2
 
 local Character = nil
@@ -890,7 +876,7 @@ local function IsOnGround()
 end
 
 local function updateBhop()
-    local isBhopActive = FeatureStates.BhopEnabled or bhopHoldActive
+    local isBhopActive = getgenv().FeatureStates.BhopEnabled or getgenv().bhopHoldActive
 
     if isBhopActive and Humanoid then
         local now = tick()
@@ -924,32 +910,32 @@ end
 UserInputService.InputBegan:Connect(function(input, gameProcessedEvent)
     if gameProcessedEvent then return end
     if input.KeyCode == Enum.KeyCode.Space then
-        bhopHoldActive = true
+        getgenv().bhopHoldActive = true
     end
 end)
 
 UserInputService.InputEnded:Connect(function(input)
     if input.KeyCode == Enum.KeyCode.Space then
-        bhopHoldActive = false
+        getgenv().bhopHoldActive = false
     end
 end)
 
-local bhopConnection = RunService.Heartbeat:Connect(updateBhop)
+getgenv().bhopConnection = RunService.Heartbeat:Connect(updateBhop)
 
 PlayerTab:Toggle({
     Title = "Bhop",
     Value = false,
     Callback = function(state)
-        FeatureStates.BhopEnabled = state
-        if state and not featureToggles["Bhop"] then
-            featureToggles["Bhop"] = createFeatureToggle("Bhop", state, 0.3, function(newState)
-                FeatureStates.BhopEnabled = newState
+        getgenv().FeatureStates.BhopEnabled = state
+        if state and not getgenv().featureToggles["Bhop"] then
+            getgenv().featureToggles["Bhop"] = createFeatureToggle("Bhop", state, 0.3, function(newState)
+                getgenv().FeatureStates.BhopEnabled = newState
             end)
         end
-        if featureToggles["Bhop"] then
-            featureToggles["Bhop"].Gui.Enabled = state
-            if featureToggles["Bhop"].UpdateState then
-                featureToggles["Bhop"].UpdateState(state)
+        if getgenv().featureToggles["Bhop"] then
+            getgenv().featureToggles["Bhop"].Gui.Enabled = state
+            if getgenv().featureToggles["Bhop"].UpdateState then
+                getgenv().featureToggles["Bhop"].UpdateState(state)
             end
         end
     end
@@ -961,7 +947,7 @@ PlayerTab:Dropdown({
     Multi = false,
     Default = 1,
     Callback = function(value)
-        FeatureStates.BhopMode = value
+        getgenv().FeatureStates.BhopMode = value
     end
 })
 
@@ -971,7 +957,7 @@ PlayerTab:Input({
     Numeric = true,
     Callback = function(value)
         if value and tostring(value):sub(1, 1) == "-" then
-            FeatureStates.BhopAccelValue = tonumber(value)
+            getgenv().FeatureStates.BhopAccelValue = tonumber(value)
         end
     end
 })
@@ -996,7 +982,7 @@ PlayerTab:Dropdown({
     Values = emoteList,
     Multi = false,
     Callback = function(option)
-        FeatureStates.SelectedEmote = option
+        getgenv().FeatureStates.SelectedEmote = option
     end
 })
 
@@ -1004,7 +990,7 @@ PlayerTab:Toggle({
     Title = "Enable Emote (Hold Crouch Button)",
     Default = false,
     Callback = function(state)
-        FeatureStates.EmoteEnabled = state
+        getgenv().FeatureStates.EmoteEnabled = state
     end
 })
 
@@ -1029,9 +1015,9 @@ task.spawn(function()
             button.MouseButton1Down:Connect(function()
                 holding = true
                 emoteTask = task.delay(0.5, function()
-                    if holding and FeatureStates.EmoteEnabled and FeatureStates.SelectedEmote then
+                    if holding and getgenv().FeatureStates.EmoteEnabled and getgenv().FeatureStates.SelectedEmote then
                         pcall(function()
-                            ReplicatedStorage.Events.Character.Emote:FireServer(FeatureStates.SelectedEmote)
+                            ReplicatedStorage.Events.Character.Emote:FireServer(getgenv().FeatureStates.SelectedEmote)
                         end)
                     end
                 end)
@@ -1056,7 +1042,7 @@ PlayerTab:Divider()
 local function triggerLagSwitch()
     task.spawn(function()
         local start = tick()
-        while tick() - start < FeatureStates.LagDuration do
+        while tick() - start < getgenv().FeatureStates.LagDuration do
             for i = 1, 10000 do
                 math.random(1, 1000000)
             end
@@ -1069,19 +1055,19 @@ PlayerTab:Toggle({
     Icon = "zap",
     Default = false,
     Callback = function(state)
-        FeatureStates.LagSwitchEnabled = state
-        if state and not featureToggles["Lag Switch"] then
-            featureToggles["Lag Switch"] = createFeatureToggle("Lag Switch", state, 0.35, function(newState)
-                FeatureStates.LagSwitchEnabled = newState
+        getgenv().FeatureStates.LagSwitchEnabled = state
+        if state and not getgenv().featureToggles["Lag Switch"] then
+            getgenv().featureToggles["Lag Switch"] = createFeatureToggle("Lag Switch", state, 0.35, function(newState)
+                getgenv().FeatureStates.LagSwitchEnabled = newState
                 if newState then
                     triggerLagSwitch()
                 end
             end)
         end
-        if featureToggles["Lag Switch"] then
-            featureToggles["Lag Switch"].Gui.Enabled = state
-            if featureToggles["Lag Switch"].UpdateState then
-                featureToggles["Lag Switch"].UpdateState(state)
+        if getgenv().featureToggles["Lag Switch"] then
+            getgenv().featureToggles["Lag Switch"].Gui.Enabled = state
+            if getgenv().featureToggles["Lag Switch"].UpdateState then
+                getgenv().featureToggles["Lag Switch"].UpdateState(state)
             end
         end
         if state then
@@ -1092,25 +1078,25 @@ PlayerTab:Toggle({
 
 PlayerTab:Input({
     Title = "Lag Duration (seconds)",
-    Default = tostring(FeatureStates.LagDuration),
+    Default = tostring(getgenv().FeatureStates.LagDuration),
     Placeholder = "Enter seconds",
     NumbersOnly = true,
     Callback = function(text)
         local n = tonumber(text)
         if n and n > 0 and n <= 10 then
-            FeatureStates.LagDuration = n
+            getgenv().FeatureStates.LagDuration = n
         end
     end
 })
 
-local AutoCarryConnection = nil
+getgenv().AutoCarryConnection = nil
 local InteractRemote = ReplicatedStorage:WaitForChild("Events"):WaitForChild("Character"):WaitForChild("Interact", 10)
 
 local function startAutoCarry()
-    if AutoCarryConnection then return end
+    if getgenv().AutoCarryConnection then return end
     
-    AutoCarryConnection = RunService.Heartbeat:Connect(function()
-        if not FeatureStates.AutoCarry then return end
+    getgenv().AutoCarryConnection = RunService.Heartbeat:Connect(function()
+        if not getgenv().FeatureStates.AutoCarry then return end
         local char = LocalPlayer.Character
         local hrp = char and char:FindFirstChild("HumanoidRootPart")
         if hrp and InteractRemote then
@@ -1131,9 +1117,9 @@ local function startAutoCarry()
 end
 
 local function stopAutoCarry()
-    if AutoCarryConnection then
-        AutoCarryConnection:Disconnect()
-        AutoCarryConnection = nil
+    if getgenv().AutoCarryConnection then
+        getgenv().AutoCarryConnection:Disconnect()
+        getgenv().AutoCarryConnection = nil
     end
 end
 
@@ -1141,12 +1127,12 @@ AutoTab:Toggle({
     Title = "Auto Carry",
     Value = false,
     Callback = function(state)
-        FeatureStates.AutoCarry = state
+        getgenv().FeatureStates.AutoCarry = state
         if state then
             startAutoCarry()
-            if not featureToggles["Auto Carry"] then
-                featureToggles["Auto Carry"] = createFeatureToggle("Auto Carry", state, 0.2, function(newState)
-                    FeatureStates.AutoCarry = newState
+            if not getgenv().featureToggles["Auto Carry"] then
+                getgenv().featureToggles["Auto Carry"] = createFeatureToggle("Auto Carry", state, 0.2, function(newState)
+                    getgenv().FeatureStates.AutoCarry = newState
                     if newState then
                         startAutoCarry()
                     else
@@ -1158,21 +1144,20 @@ AutoTab:Toggle({
             stopAutoCarry()
         end
         
-        if featureToggles["Auto Carry"] then
-            featureToggles["Auto Carry"].Gui.Enabled = state
-            if featureToggles["Auto Carry"].UpdateState then
-                featureToggles["Auto Carry"].UpdateState(state)
+        if getgenv().featureToggles["Auto Carry"] then
+            getgenv().featureToggles["Auto Carry"].Gui.Enabled = state
+            if getgenv().featureToggles["Auto Carry"].UpdateState then
+                getgenv().featureToggles["Auto Carry"].UpdateState(state)
             end
         end
     end
 })
 
-
 AutoTab:Divider()
 
-local InstantReviveEnabled = false
-local InstantReviveDelay = 0.15
-local InstantReviveConnection = nil
+getgenv().InstantReviveEnabled = false
+getgenv().InstantReviveDelay = 0.15
+getgenv().InstantReviveConnection = nil
 
 local function isPlayerDowned(player)
     if not player or not player.Character then return false end
@@ -1180,10 +1165,10 @@ local function isPlayerDowned(player)
 end
 
 local function startInstantRevive()
-    if InstantReviveConnection then return end
+    if getgenv().InstantReviveConnection then return end
     
-    InstantReviveConnection = RunService.Heartbeat:Connect(function()
-        if not InstantReviveEnabled then return end
+    getgenv().InstantReviveConnection = RunService.Heartbeat:Connect(function()
+        if not getgenv().InstantReviveEnabled then return end
         
         local character = LocalPlayer.Character
         if not character then return end
@@ -1203,7 +1188,7 @@ local function startInstantRevive()
                         pcall(function()
                             ReplicatedStorage.Events.Character.Interact:FireServer("Revive", true, player.Name)
                         end)
-                        task.wait(InstantReviveDelay)
+                        task.wait(getgenv().InstantReviveDelay)
                     end
                 end
             end
@@ -1212,9 +1197,9 @@ local function startInstantRevive()
 end
 
 local function stopInstantRevive()
-    if InstantReviveConnection then
-        InstantReviveConnection:Disconnect()
-        InstantReviveConnection = nil
+    if getgenv().InstantReviveConnection then
+        getgenv().InstantReviveConnection:Disconnect()
+        getgenv().InstantReviveConnection = nil
     end
 end
 
@@ -1222,8 +1207,8 @@ AutoTab:Toggle({
     Title = "Instant Revive While Emoting",
     Value = false,
     Callback = function(state)
-        FeatureStates.InstantReviveEnabled = state
-        InstantReviveEnabled = state
+        getgenv().FeatureStates.InstantReviveEnabled = state
+        getgenv().InstantReviveEnabled = state
         
         if state then
             startInstantRevive()
@@ -1238,14 +1223,71 @@ AutoTab:Slider({
     Desc = "Delay between revives",
     Value = { Min = 0, Max = 1, Default = 0.15 },
     Callback = function(value)
-        FeatureStates.InstantReviveDelay = value
-        InstantReviveDelay = value
+        getgenv().FeatureStates.InstantReviveDelay = value
+        getgenv().InstantReviveDelay = value
     end
 })
 
 AutoTab:Divider()
 
-local AutoTicketFarmConnection = nil
+getgenv().AntiAFK = {
+    Enabled = false,
+    Connection = nil
+}
+
+local virtualUser = game:GetService("VirtualUser")
+
+local function startAntiAFK()
+    if getgenv().AntiAFK.Connection then
+        getgenv().AntiAFK.Connection:Disconnect()
+        getgenv().AntiAFK.Connection = nil
+    end
+    
+    getgenv().AntiAFK.Connection = LocalPlayer.Idled:Connect(function()
+        virtualUser:Button2Down(Vector2.new(0, 0), workspace.CurrentCamera.CFrame)
+        task.wait(1)
+        virtualUser:Button2Up(Vector2.new(0, 0), workspace.CurrentCamera.CFrame)
+    end)
+    
+    getgenv().AntiAFK.Enabled = true
+end
+
+local function stopAntiAFK()
+    if getgenv().AntiAFK.Connection then
+        getgenv().AntiAFK.Connection:Disconnect()
+        getgenv().AntiAFK.Connection = nil
+    end
+    
+    getgenv().AntiAFK.Enabled = false
+end
+
+AutoTab:Toggle({
+    Title = "Anti AFK",
+    Desc = "Prevents getting kicked for inactivity",
+    Value = getgenv().AntiAFK.Enabled,
+    Callback = function(state)
+        if state then
+            startAntiAFK()
+        else
+            stopAntiAFK()
+        end
+    end
+})
+
+LocalPlayer.CharacterAdded:Connect(function()
+    if getgenv().AntiAFK.Enabled then
+        task.wait(1)
+        startAntiAFK()
+    end
+end)
+
+game:GetService("Players").PlayerRemoving:Connect(function(leavingPlayer)
+    if leavingPlayer == LocalPlayer then
+        stopAntiAFK()
+    end
+end)
+
+getgenv().AutoTicketFarmConnection = nil
 
 local function startAutoTicketFarm()
     local securityPart = workspace:FindFirstChild("SecurityPart")
@@ -1254,11 +1296,11 @@ local function startAutoTicketFarm()
         return
     end
     
-    AutoTicketFarmConnection = RunService.Heartbeat:Connect(function()
-        if not FeatureStates.AutoTicketFarm then
-            if AutoTicketFarmConnection then
-                AutoTicketFarmConnection:Disconnect()
-                AutoTicketFarmConnection = nil
+    getgenv().AutoTicketFarmConnection = RunService.Heartbeat:Connect(function()
+        if not getgenv().FeatureStates.AutoTicketFarm then
+            if getgenv().AutoTicketFarmConnection then
+                getgenv().AutoTicketFarmConnection:Disconnect()
+                getgenv().AutoTicketFarmConnection = nil
             end
             return
         end
@@ -1295,9 +1337,9 @@ local function startAutoTicketFarm()
 end
 
 local function stopAutoTicketFarm()
-    if AutoTicketFarmConnection then
-        AutoTicketFarmConnection:Disconnect()
-        AutoTicketFarmConnection = nil
+    if getgenv().AutoTicketFarmConnection then
+        getgenv().AutoTicketFarmConnection:Disconnect()
+        getgenv().AutoTicketFarmConnection = nil
     end
     
     local character = LocalPlayer.Character
@@ -1313,7 +1355,7 @@ AutoTab:Toggle({
     Desc = "Auto farm tickets",
     Value = false,
     Callback = function(state)
-        FeatureStates.AutoTicketFarm = state
+        getgenv().FeatureStates.AutoTicketFarm = state
         if state then
             startAutoTicketFarm()
         else
@@ -1325,7 +1367,7 @@ AutoTab:Toggle({
 local function startAutoMoneyFarm()
     local securityPart = workspace:FindFirstChild("SecurityPart")
     if not securityPart then
-        WindUI:Notify({
+        getgenv().WindUI:Notify({
             Title = "Auto Money Farm",
             Content = "SecurityPart not found!",
             Duration = 3
@@ -1333,13 +1375,13 @@ local function startAutoMoneyFarm()
         return
     end
     
-    if FeatureStates.AutoMoneyFarmConnection then
-        FeatureStates.AutoMoneyFarmConnection:Disconnect()
-        FeatureStates.AutoMoneyFarmConnection = nil
+    if getgenv().AutoMoneyFarmConnection then
+        getgenv().AutoMoneyFarmConnection:Disconnect()
+        getgenv().AutoMoneyFarmConnection = nil
     end
     
-    FeatureStates.AutoMoneyFarmConnection = RunService.Heartbeat:Connect(function()
-        if not FeatureStates.AutoMoneyFarm then return end
+    getgenv().AutoMoneyFarmConnection = RunService.Heartbeat:Connect(function()
+        if not getgenv().FeatureStates.AutoMoneyFarm then return end
         
         local character = LocalPlayer.Character
         if not character then return end
@@ -1395,9 +1437,9 @@ local function startAutoMoneyFarm()
 end
 
 local function stopAutoMoneyFarm()
-    if FeatureStates.AutoMoneyFarmConnection then
-        FeatureStates.AutoMoneyFarmConnection:Disconnect()
-        FeatureStates.AutoMoneyFarmConnection = nil
+    if getgenv().AutoMoneyFarmConnection then
+        getgenv().AutoMoneyFarmConnection:Disconnect()
+        getgenv().AutoMoneyFarmConnection = nil
     end
     
     local character = LocalPlayer.Character
@@ -1414,11 +1456,11 @@ AutoTab:Toggle({
     Desc = "Auto revive players for money",
     Value = false,
     Callback = function(state)
-        FeatureStates.AutoMoneyFarm = state
+        getgenv().FeatureStates.AutoMoneyFarm = state
         
-        if state and not featureToggles["Auto Money Farm"] then
-            featureToggles["Auto Money Farm"] = createFeatureToggle("Auto Money Farm", state, 0.4, function(newState)
-                FeatureStates.AutoMoneyFarm = newState
+        if state and not getgenv().featureToggles["Auto Money Farm"] then
+            getgenv().featureToggles["Auto Money Farm"] = createFeatureToggle("Auto Money Farm", state, 0.4, function(newState)
+                getgenv().FeatureStates.AutoMoneyFarm = newState
                 if newState then
                     startAutoMoneyFarm()
                 else
@@ -1427,10 +1469,10 @@ AutoTab:Toggle({
             end)
         end
         
-        if featureToggles["Auto Money Farm"] then
-            featureToggles["Auto Money Farm"].Gui.Enabled = state
-            if featureToggles["Auto Money Farm"].UpdateState then
-                featureToggles["Auto Money Farm"].UpdateState(state)
+        if getgenv().featureToggles["Auto Money Farm"] then
+            getgenv().featureToggles["Auto Money Farm"].Gui.Enabled = state
+            if getgenv().featureToggles["Auto Money Farm"].UpdateState then
+                getgenv().featureToggles["Auto Money Farm"].UpdateState(state)
             end
         end
         
@@ -1524,7 +1566,7 @@ FPSTab:Button({
         Lighting.FogStart = 0
         Lighting.GlobalShadows = false
         
-        WindUI:Notify({
+        getgenv().WindUI:Notify({
             Title = "Graphics Optimized",
             Content = "V.2 optimization applied successfully",
             Duration = 3
@@ -1599,7 +1641,7 @@ FPSTab:Button({
         optimizeNetwork()
         cleanWorkspace()
         
-        WindUI:Notify({
+        getgenv().WindUI:Notify({
             Title = "✅ Lag Fix Applied",
             Content = "Game performance optimized",
             Duration = 3
@@ -1653,11 +1695,11 @@ FPSTab:Toggle({
     end
 })
 
-local espObjects = {}
-local espThreads = {}
+getgenv().espObjects = {}
+getgenv().espThreads = {}
 
 local function createESP(part, name, baseColor)
-    if espObjects[part] then return espObjects[part] end
+    if getgenv().espObjects[part] then return getgenv().espObjects[part] end
     
     local billboard = Instance.new("BillboardGui")
     billboard.Name = name .. "ESP"
@@ -1680,29 +1722,29 @@ local function createESP(part, name, baseColor)
     label.TextColor3 = baseColor or Color3.fromRGB(255, 255, 255)
     label.Parent = billboard
     
-    espObjects[part] = {billboard = billboard, label = label, type = name}
-    return espObjects[part]
+    getgenv().espObjects[part] = {billboard = billboard, label = label, type = name}
+    return getgenv().espObjects[part]
 end
 
 local function removeESP(part)
-    if espObjects[part] then
-        espObjects[part].billboard:Destroy()
-        espObjects[part] = nil
+    if getgenv().espObjects[part] then
+        getgenv().espObjects[part].billboard:Destroy()
+        getgenv().espObjects[part] = nil
     end
 end
 
 local function cleanupESP()
-    for part, data in pairs(espObjects) do
+    for part, data in pairs(getgenv().espObjects) do
         if data and data.billboard then
             data.billboard:Destroy()
         end
     end
-    espObjects = {}
+    getgenv().espObjects = {}
     
-    for name, thread in pairs(espThreads) do
+    for name, thread in pairs(getgenv().espThreads) do
         if thread then
             coroutine.close(thread)
-            espThreads[name] = nil
+            getgenv().espThreads[name] = nil
         end
     end
 end
@@ -1711,14 +1753,14 @@ EspTab:Toggle({
     Title = "Esp Player",
     Value = false,
     Callback = function(state)
-        FeatureStates.EspPlayer = state
+        getgenv().FeatureStates.EspPlayer = state
         
-        if espThreads["player"] then
-            coroutine.close(espThreads["player"])
-            espThreads["player"] = nil
+        if getgenv().espThreads["player"] then
+            coroutine.close(getgenv().espThreads["player"])
+            getgenv().espThreads["player"] = nil
         end
         
-        for part, data in pairs(espObjects) do
+        for part, data in pairs(getgenv().espObjects) do
             if data and data.type == "Player" then
                 removeESP(part)
             end
@@ -1726,14 +1768,14 @@ EspTab:Toggle({
         
         if not state then return end
         
-        espThreads["player"] = coroutine.create(function()
+        getgenv().espThreads["player"] = coroutine.create(function()
             local function getDistance(pos)
                 local char = LocalPlayer.Character
                 local hrp = char and char:FindFirstChild("HumanoidRootPart")
                 return hrp and (pos - hrp.Position).Magnitude or 0
             end
             
-            while FeatureStates.EspPlayer do
+            while getgenv().FeatureStates.EspPlayer do
                 local folder = workspace:FindFirstChild("Game") and workspace.Game:FindFirstChild("Players")
                 if folder then
                     for _, char in ipairs(folder:GetChildren()) do
@@ -1744,13 +1786,13 @@ EspTab:Toggle({
                         local hrp = char:FindFirstChild("HumanoidRootPart")
                         if not hrp then continue end
                         
-                        local espData = espObjects[hrp]
+                        local espData = getgenv().espObjects[hrp]
                         if not espData then
                             espData = createESP(hrp, "Player", Color3.fromRGB(100, 180, 255))
                         end
                         
                         if not espData or not espData.billboard or not espData.billboard.Parent then
-                            espObjects[hrp] = nil
+                            getgenv().espObjects[hrp] = nil
                             continue
                         end
                         
@@ -1778,7 +1820,7 @@ EspTab:Toggle({
             end
         end)
         
-        coroutine.resume(espThreads["player"])
+        coroutine.resume(getgenv().espThreads["player"])
     end
 })
 
@@ -1786,14 +1828,14 @@ EspTab:Toggle({
     Title = "Esp Ticket",
     Value = false,
     Callback = function(state)
-        FeatureStates.EspTicket = state
+        getgenv().FeatureStates.EspTicket = state
         
-        if espThreads["ticket"] then
-            coroutine.close(espThreads["ticket"])
-            espThreads["ticket"] = nil
+        if getgenv().espThreads["ticket"] then
+            coroutine.close(getgenv().espThreads["ticket"])
+            getgenv().espThreads["ticket"] = nil
         end
         
-        for part, data in pairs(espObjects) do
+        for part, data in pairs(getgenv().espObjects) do
             if data and data.type == "Ticket" then
                 removeESP(part)
             end
@@ -1801,14 +1843,14 @@ EspTab:Toggle({
         
         if not state then return end
         
-        espThreads["ticket"] = coroutine.create(function()
+        getgenv().espThreads["ticket"] = coroutine.create(function()
             local function getDistance(pos)
                 local char = LocalPlayer.Character
                 local hrp = char and char:FindFirstChild("HumanoidRootPart")
                 return hrp and (pos - hrp.Position).Magnitude or 0
             end
             
-            while FeatureStates.EspTicket do
+            while getgenv().FeatureStates.EspTicket do
                 local ticketFolder = workspace:FindFirstChild("Game") and 
                                    workspace.Game:FindFirstChild("Effects") and 
                                    workspace.Game.Effects:FindFirstChild("Tickets")
@@ -1820,13 +1862,13 @@ EspTab:Toggle({
                         local part = ticketModel:FindFirstChildWhichIsA("BasePart")
                         if not part then continue end
                         
-                        local espData = espObjects[part]
+                        local espData = getgenv().espObjects[part]
                         if not espData then
                             espData = createESP(part, "Ticket", Color3.fromRGB(255, 255, 100))
                         end
                         
                         if not espData or not espData.billboard or not espData.billboard.Parent then
-                            espObjects[part] = nil
+                            getgenv().espObjects[part] = nil
                             continue
                         end
                         
@@ -1838,7 +1880,7 @@ EspTab:Toggle({
             end
         end)
         
-        coroutine.resume(espThreads["ticket"])
+        coroutine.resume(getgenv().espThreads["ticket"])
     end
 })
 
@@ -1846,14 +1888,14 @@ EspTab:Toggle({
     Title = "Esp Nextbot",
     Value = false,
     Callback = function(state)
-        FeatureStates.EspNextbot = state
+        getgenv().FeatureStates.EspNextbot = state
         
-        if espThreads["nextbot"] then
-            coroutine.close(espThreads["nextbot"])
-            espThreads["nextbot"] = nil
+        if getgenv().espThreads["nextbot"] then
+            coroutine.close(getgenv().espThreads["nextbot"])
+            getgenv().espThreads["nextbot"] = nil
         end
         
-        for part, data in pairs(espObjects) do
+        for part, data in pairs(getgenv().espObjects) do
             if data and data.type == "Nextbot" then
                 removeESP(part)
             end
@@ -1861,14 +1903,14 @@ EspTab:Toggle({
         
         if not state then return end
         
-        espThreads["nextbot"] = coroutine.create(function()
+        getgenv().espThreads["nextbot"] = coroutine.create(function()
             local function getDistance(pos)
                 local char = LocalPlayer.Character
                 local hrp = char and char:FindFirstChild("HumanoidRootPart")
                 return hrp and (pos - hrp.Position).Magnitude or 0
             end
             
-            while FeatureStates.EspNextbot do
+            while getgenv().FeatureStates.EspNextbot do
                 local folder = workspace:FindFirstChild("Game") and workspace.Game:FindFirstChild("Players")
                 if folder then
                     for _, npc in ipairs(folder:GetChildren()) do
@@ -1881,13 +1923,13 @@ EspTab:Toggle({
                                     npc:FindFirstChildWhichIsA("BasePart")
                         if not part then continue end
                         
-                        local espData = espObjects[part]
+                        local espData = getgenv().espObjects[part]
                         if not espData then
                             espData = createESP(part, "Nextbot", Color3.fromRGB(200, 100, 255))
                         end
                         
                         if not espData or not espData.billboard or not espData.billboard.Parent then
-                            espObjects[part] = nil
+                            getgenv().espObjects[part] = nil
                             continue
                         end
                         
@@ -1910,39 +1952,39 @@ EspTab:Toggle({
             end
         end)
         
-        coroutine.resume(espThreads["nextbot"])
+        coroutine.resume(getgenv().espThreads["nextbot"])
     end
 })
 
-local tracerThread = nil
-local tracerLines = {}
+getgenv().tracerThread = nil
+getgenv().tracerLines = {}
 
 local function cleanupTracers()
-    for _, line in pairs(tracerLines) do
+    for _, line in pairs(getgenv().tracerLines) do
         if line then
             pcall(function() line:Remove() end)
         end
     end
-    tracerLines = {}
+    getgenv().tracerLines = {}
 end
 
 EspTab:Toggle({
     Title = "Tracer Downed Players",
     Value = false,
     Callback = function(state)
-        FeatureStates.TracerDowned = state
+        getgenv().FeatureStates.TracerDowned = state
         
-        if tracerThread then
-            coroutine.close(tracerThread)
-            tracerThread = nil
+        if getgenv().tracerThread then
+            coroutine.close(getgenv().tracerThread)
+            getgenv().tracerThread = nil
         end
         
         cleanupTracers()
         
         if not state then return end
         
-        tracerThread = coroutine.create(function()
-            while FeatureStates.TracerDowned do
+        getgenv().tracerThread = coroutine.create(function()
+            while getgenv().FeatureStates.TracerDowned do
                 cleanupTracers()
                 
                 local folder = workspace:FindFirstChild("Game") and workspace.Game:FindFirstChild("Players")
@@ -1964,7 +2006,7 @@ EspTab:Toggle({
                             tracer.From = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y)
                             tracer.To = Vector2.new(pos.X, pos.Y)
                             tracer.Visible = true
-                            table.insert(tracerLines, tracer)
+                            table.insert(getgenv().tracerLines, tracer)
                         end
                     end
                 end
@@ -1972,40 +2014,131 @@ EspTab:Toggle({
             end
         end)
         
-        coroutine.resume(tracerThread)
+        coroutine.resume(getgenv().tracerThread)
     end
 })
+
+getgenv().GameTimerUI = {
+    Enabled = false,
+    Connection = nil,
+    ScreenGui = nil,
+    StartTime = tick()
+}
+
+local function formatTime(seconds)
+    local minutes = math.floor(seconds / 60)
+    local secs = math.floor(seconds % 60)
+    return string.format("%02d:%02d", minutes, secs)
+end
+
+local function createTimerUI()
+    if getgenv().GameTimerUI.ScreenGui then
+        getgenv().GameTimerUI.ScreenGui:Destroy()
+    end
+    
+    local screenGui = Instance.new("ScreenGui")
+    screenGui.Name = "TimersUI"
+    screenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
+    screenGui.Enabled = getgenv().GameTimerUI.Enabled
+    
+    local timeLabel = Instance.new("TextLabel")
+    timeLabel.Name = "TimeLabel"
+    timeLabel.Size = UDim2.new(0, 150, 0, 40)
+    timeLabel.Position = UDim2.new(0.02, 0, 0.02, 0)
+    timeLabel.BackgroundTransparency = 1
+    timeLabel.Text = "Time: 0"
+    timeLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+    timeLabel.TextSize = 18
+    timeLabel.Font = Enum.Font.Gotham
+    timeLabel.TextXAlignment = Enum.TextXAlignment.Left
+    timeLabel.Parent = screenGui
+
+    local clientLabel = Instance.new("TextLabel")
+    clientLabel.Name = "ClientLabel"
+    clientLabel.Size = UDim2.new(0, 150, 0, 40)
+    clientLabel.Position = UDim2.new(0.02, 0, 0.07, 0)
+    clientLabel.BackgroundTransparency = 1
+    clientLabel.Text = "Client Time: 00:00"
+    clientLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+    clientLabel.TextSize = 18
+    clientLabel.Font = Enum.Font.Gotham
+    clientLabel.TextXAlignment = Enum.TextXAlignment.Left
+    clientLabel.Parent = screenGui
+    
+    getgenv().GameTimerUI.ScreenGui = screenGui
+    getgenv().GameTimerUI.StartTime = tick()
+end
+
+local function updateTimer()
+    if getgenv().GameTimerUI.Connection then
+        getgenv().GameTimerUI.Connection:Disconnect()
+        getgenv().GameTimerUI.Connection = nil
+    end
+    
+    getgenv().GameTimerUI.Connection = RunService.Heartbeat:Connect(function()
+        if not getgenv().GameTimerUI.ScreenGui or not getgenv().GameTimerUI.ScreenGui.Enabled then return end
+        
+        local statsFolder = workspace:FindFirstChild("Game") and workspace.Game:FindFirstChild("Stats")
+        local timeLabel = getgenv().GameTimerUI.ScreenGui:FindFirstChild("TimeLabel")
+        local clientLabel = getgenv().GameTimerUI.ScreenGui:FindFirstChild("ClientLabel")
+        
+        if timeLabel and clientLabel then
+            if statsFolder then
+                local timerValue = statsFolder:GetAttribute("Timer")
+                timeLabel.Text = "Time: " .. (timerValue and tostring(math.floor(timerValue)) or "0")
+            else
+                timeLabel.Text = "Time: 0"
+            end
+            
+            local clientTime = tick() - getgenv().GameTimerUI.StartTime
+            clientLabel.Text = "Client Time: " .. formatTime(clientTime)
+        end
+    end)
+end
+
+createTimerUI()
 
 VisualTab:Toggle({
-    Title = "Timer Display",
-    Value = false,
+    Title = "Show Game Timer",
+    Desc = "Displays game timer and client time",
+    Value = getgenv().GameTimerUI.Enabled,
     Callback = function(state)
-        FeatureStates.TimerDisplay = state
+        getgenv().GameTimerUI.Enabled = state
         
-        local function getRoundTimer()
-            local player = game:GetService("Players").LocalPlayer
-            local pg = player.PlayerGui
-            local shared = pg:FindFirstChild("Shared")
-            local hud = shared and shared:FindFirstChild("HUD")
-            local overlay = hud and hud:FindFirstChild("Overlay")
-            local default = overlay and overlay:FindFirstChild("Default")
-            local ro = default and default:FindFirstChild("RoundOverlay")
-            local round = ro and ro:FindFirstChild("Round")
-            return round and round:FindFirstChild("RoundTimer")
+        if getgenv().GameTimerUI.ScreenGui then
+            getgenv().GameTimerUI.ScreenGui.Enabled = state
         end
-
+        
         if state then
-            task.spawn(function()
-                while FeatureStates.TimerDisplay do
-                    local timer = getRoundTimer()
-                    if timer then
-                    end
-                    task.wait(1)
-                end
-            end)
+            getgenv().GameTimerUI.StartTime = tick()
+            updateTimer()
+        else
+            if getgenv().GameTimerUI.Connection then
+                getgenv().GameTimerUI.Connection:Disconnect()
+                getgenv().GameTimerUI.Connection = nil
+            end
         end
     end
 })
+
+LocalPlayer.CharacterAdded:Connect(function()
+    if getgenv().GameTimerUI.Enabled then
+        getgenv().GameTimerUI.StartTime = tick()
+    end
+end)
+
+game:GetService("Players").PlayerRemoving:Connect(function(leavingPlayer)
+    if leavingPlayer == LocalPlayer then
+        if getgenv().GameTimerUI.Connection then
+            getgenv().GameTimerUI.Connection:Disconnect()
+            getgenv().GameTimerUI.Connection = nil
+        end
+        if getgenv().GameTimerUI.ScreenGui then
+            getgenv().GameTimerUI.ScreenGui:Destroy()
+            getgenv().GameTimerUI.ScreenGui = nil
+        end
+    end
+end)
 
 local ChangeSettingRemote = ReplicatedStorage:WaitForChild("Events"):WaitForChild("Data"):WaitForChild("ChangeSetting")
 local UpdatedEvent = ReplicatedStorage.Modules.Client.Settings.Updated
@@ -2027,6 +2160,54 @@ VisualTab:Slider({
 
 VisualTab:Divider()
 
+VisualTab:Toggle({
+    Title = "bypass battlepass",
+    Desc = "when u buy something the battlepass get normally",
+    Value = false,
+    Callback = function(state)
+        if state then
+            local function hideBattlepass()
+                local success = pcall(function()
+                    local gui = LocalPlayer.PlayerGui.Menu.Views.Battlepass.ViewPass.Center.ViewPass.Unlocked
+                    gui.Visible = false
+                    return true
+                end)
+                
+                if not success then
+                    warn("Could not find Battlepass GUI")
+                end
+            end
+            
+            if LocalPlayer.PlayerGui:FindFirstChild("Menu") then
+                task.wait(2)
+                hideBattlepass()
+            end
+            
+            local connection
+            connection = LocalPlayer.PlayerGui.ChildAdded:Connect(function(child)
+                if child.Name == "Menu" then
+                    task.wait(2)
+                    hideBattlepass()
+                end
+            end)
+            
+            FeatureStates.HideBattlepassConnection = connection
+        else
+            if FeatureStates.HideBattlepassConnection then
+                FeatureStates.HideBattlepassConnection:Disconnect()
+                FeatureStates.HideBattlepassConnection = nil
+            end
+            
+            local success = pcall(function()
+                local gui = LocalPlayer.PlayerGui.Menu.Views.Battlepass.ViewPass.Center.ViewPass.Unlocked
+                gui.Visible = true
+            end)
+        end
+    end
+})
+
+VisualTab:Divider()
+
 local function manualRevive()
     local character = LocalPlayer.Character
     if not character then return end
@@ -2034,7 +2215,7 @@ local function manualRevive()
     local isDowned = character:GetAttribute("Downed")
     if not isDowned then return end
     
-    if FeatureStates.SelfReviveMethod == "Spawnpoint" then
+    if getgenv().FeatureStates.SelfReviveMethod == "Spawnpoint" then
         if not hasRevived then
             hasRevived = true
             pcall(function()
@@ -2044,7 +2225,7 @@ local function manualRevive()
                 hasRevived = false
             end)
         end
-    elseif FeatureStates.SelfReviveMethod == "Fake Revive" then
+    elseif getgenv().FeatureStates.SelfReviveMethod == "Fake Revive" then
         if hrp then
             lastSavedPosition = hrp.Position
         end
@@ -2087,7 +2268,7 @@ VisualTab:Input({
     Callback = function(Value)
         local num = tonumber(Value)
         if num then
-            FeatureStates.CameraStretchVertical = num
+            getgenv().FeatureStates.CameraStretchVertical = num
         end
     end
 })
@@ -2099,38 +2280,262 @@ VisualTab:Input({
     Callback = function(Value)
         local num = tonumber(Value)
         if num then
-            FeatureStates.CameraStretchHorizontal = num
+            getgenv().FeatureStates.CameraStretchHorizontal = num
         end
     end
 })
 
-local ScreenStretchEnabled = false
-local ScreenStretchVertical = 0.65
-local ScreenStretchConn = nil
+getgenv().ScreenStretchEnabled = false
+getgenv().ScreenStretchVertical = 0.65
+getgenv().ScreenStretchConn = nil
 
 VisualTab:Toggle({
     Title = "Screen Stretch",
     Desc = "Adjust vertical camera scaling",
     Value = false,
     Callback = function(state)
-        ScreenStretchEnabled = state
+        getgenv().ScreenStretchEnabled = state
         
         if state then
-            if not ScreenStretchConn then
-                ScreenStretchConn = RunService.RenderStepped:Connect(function()
-                    if Camera and ScreenStretchEnabled then
-                        Camera.CFrame = Camera.CFrame * CFrame.new(0, 0, 0, 1, 0, 0, 0, ScreenStretchVertical, 0, 0, 0, 1)
+            if not getgenv().ScreenStretchConn then
+                getgenv().ScreenStretchConn = RunService.RenderStepped:Connect(function()
+                    if Camera and getgenv().ScreenStretchEnabled then
+                        Camera.CFrame = Camera.CFrame * CFrame.new(0, 0, 0, 1, 0, 0, 0, getgenv().ScreenStretchVertical, 0, 0, 0, 1)
                     end
                 end)
             end
         else
-            if ScreenStretchConn then
-                ScreenStretchConn:Disconnect()
-                ScreenStretchConn = nil
+            if getgenv().ScreenStretchConn then
+                getgenv().ScreenStretchConn:Disconnect()
+                getgenv().ScreenStretchConn = nil
             end
         end
     end
 })
+
+VisualTab:Divider()
+
+VisualTab:Toggle({
+    Title = "full bright",
+    Desc = "not mine.",
+    Callback = function()
+        local Lighting = game:GetService("Lighting")
+
+        -- ปรับแสงให้สว่าง
+        Lighting.Ambient = Color3.new(1,1,1)
+        Lighting.OutdoorAmbient = Color3.new(1,1,1)
+        Lighting.Brightness = 3
+        Lighting.ExposureCompensation = 1
+
+        -- ปิด Shadow
+        Lighting.GlobalShadows = false
+
+        -- ลบเอฟเฟกต์มืดทั้งหมด เช่น ColorCorrection, DepthOfField, Bloom, SunRays
+        for _, v in pairs(Lighting:GetChildren()) do
+            if v:IsA("ColorCorrectionEffect")
+            or v:IsA("DepthOfFieldEffect")
+            or v:IsA("BloomEffect")
+            or v:IsA("SunRaysEffect")
+            or v:IsA("Atmosphere")
+            or v:IsA("Sky") then
+                v:Destroy()
+            end
+        end
+    end
+})
+
+getgenv().HeadlessKorblox = {
+    Enabled = false,
+    Connections = {}
+}
+
+local HEADLESS_MESH_ID = "rbxassetid://1095708"
+local KORBLOX_MESH_ID = "rbxassetid://101851696"
+local KORBLOX_TEXTURE_ID = "rbxassetid://101851254"
+local DARK_GREY_COLOR = Color3.fromRGB(64, 64, 64)
+
+local function removeFace(head)
+    local face = head:FindFirstChild("face")
+    if face then
+        face:Destroy()
+    end
+end
+
+local function applyHeadless(head)
+    if not head then return end
+
+    head.Transparency = 1
+    head.CanCollide = false
+
+    removeFace(head)
+
+    local mesh = Instance.new("SpecialMesh")
+    mesh.MeshType = Enum.MeshType.FileMesh
+    mesh.MeshId = HEADLESS_MESH_ID
+    mesh.Scale = Vector3.new(0.001, 0.001, 0.001)
+    mesh.Parent = head
+
+    table.insert(getgenv().HeadlessKorblox.Connections, head:GetPropertyChangedSignal("Transparency"):Connect(function()
+        if head.Transparency ~= 1 then
+            head.Transparency = 1
+        end
+    end))
+
+    table.insert(getgenv().HeadlessKorblox.Connections, head.ChildAdded:Connect(function(child)
+        if child.Name == "face" and child:IsA("Decal") then
+            child:Destroy()
+        end
+    end))
+end
+
+local function applyKorbloxR6(character)
+    local rightLeg = character:FindFirstChild("Right Leg")
+    if not rightLeg then return end
+
+    for _, child in ipairs(rightLeg:GetChildren()) do
+        if child:IsA("SpecialMesh") or child:IsA("CharacterMesh") then
+            child:Destroy()
+        end
+    end
+
+    rightLeg.Color = DARK_GREY_COLOR
+    table.insert(getgenv().HeadlessKorblox.Connections, rightLeg:GetPropertyChangedSignal("Color"):Connect(function()
+        if rightLeg.Color ~= DARK_GREY_COLOR then
+            rightLeg.Color = DARK_GREY_COLOR
+        end
+    end))
+
+    local korbloxMesh = Instance.new("SpecialMesh")
+    korbloxMesh.MeshType = Enum.MeshType.FileMesh
+    korbloxMesh.MeshId = KORBLOX_MESH_ID
+    korbloxMesh.TextureId = KORBLOX_TEXTURE_ID
+    korbloxMesh.Scale = Vector3.new(1, 1, 1)
+    korbloxMesh.Parent = rightLeg
+end
+
+local function applyKorbloxR15(character)
+    local rightUpperLeg = character:FindFirstChild("RightUpperLeg")
+    if not rightUpperLeg then return end
+
+    rightUpperLeg.Transparency = 1
+    local rightLowerLeg = character:FindFirstChild("RightLowerLeg")
+    local rightFoot = character:FindFirstChild("RightFoot")
+    if rightLowerLeg then rightLowerLeg.Transparency = 1 end
+    if rightFoot then rightFoot.Transparency = 1 end
+
+    local korbloxLeg = Instance.new("Part")
+    korbloxLeg.Name = "KorbloxLeg"
+    korbloxLeg.Size = Vector3.new(1, 2, 1)
+    korbloxLeg.Anchored = false
+    korbloxLeg.CanCollide = false
+    korbloxLeg.Color = DARK_GREY_COLOR
+    korbloxLeg.Parent = character
+
+    local mesh = Instance.new("SpecialMesh")
+    mesh.MeshType = Enum.MeshType.FileMesh
+    mesh.MeshId = KORBLOX_MESH_ID
+    mesh.TextureId = KORBLOX_TEXTURE_ID
+    mesh.Scale = Vector3.new(1, 1, 1)
+    mesh.Parent = korbloxLeg
+
+    local weld = Instance.new("Weld")
+    weld.Part0 = rightUpperLeg
+    weld.Part1 = korbloxLeg
+    weld.C0 = CFrame.new(0, -0.8, 0)
+    weld.Parent = korbloxLeg
+end
+
+local function applyCharacter(character)
+    local head = character:FindFirstChild("Head")
+    task.wait(0.1)
+    if head then
+        applyHeadless(head)
+    end
+
+    local humanoid = character:FindFirstChildOfClass("Humanoid")
+    if humanoid then
+        if humanoid.RigType == Enum.HumanoidRigType.R6 then
+            applyKorbloxR6(character)
+        elseif humanoid.RigType == Enum.HumanoidRigType.R15 then
+            applyKorbloxR15(character)
+        end
+    end
+end
+
+local function cleanupConnections()
+    for _, connection in ipairs(getgenv().HeadlessKorblox.Connections) do
+        pcall(function()
+            connection:Disconnect()
+        end)
+    end
+    getgenv().HeadlessKorblox.Connections = {}
+end
+
+VisualTab:Toggle({
+    Title = "Headless & Korblox",
+    Desc = "Apply headless head and korblox leg",
+    Value = getgenv().HeadlessKorblox.Enabled,
+    Callback = function(state)
+        getgenv().HeadlessKorblox.Enabled = state
+        
+        if state then
+            cleanupConnections()
+            
+            local character = LocalPlayer.Character
+            if character then
+                applyCharacter(character)
+            end
+            
+            getgenv().HeadlessKorblox.Connections[#getgenv().HeadlessKorblox.Connections + 1] = LocalPlayer.CharacterAdded:Connect(function(newCharacter)
+                if getgenv().HeadlessKorblox.Enabled then
+                    applyCharacter(newCharacter)
+                end
+            end)
+            
+            getgenv().HeadlessKorblox.Connections[#getgenv().HeadlessKorblox.Connections + 1] = RunService.Heartbeat:Connect(function()
+                if getgenv().HeadlessKorblox.Enabled and LocalPlayer.Character then
+                    applyCharacter(LocalPlayer.Character)
+                end
+            end)
+        else
+            cleanupConnections()
+            
+            local character = LocalPlayer.Character
+            if character then
+                local head = character:FindFirstChild("Head")
+                if head then
+                    head.Transparency = 0
+                    local mesh = head:FindFirstChildOfClass("SpecialMesh")
+                    if mesh then
+                        mesh:Destroy()
+                    end
+                end
+                
+                local rightLeg = character:FindFirstChild("Right Leg")
+                if rightLeg then
+                    rightLeg.Color = Color3.fromRGB(163, 162, 165)
+                    local mesh = rightLeg:FindFirstChildOfClass("SpecialMesh")
+                    if mesh then
+                        mesh:Destroy()
+                    end
+                end
+                
+                local korbloxLeg = character:FindFirstChild("KorbloxLeg")
+                if korbloxLeg then
+                    korbloxLeg:Destroy()
+                end
+            end
+        end
+    end
+})
+
+game:GetService("Players").PlayerRemoving:Connect(function(leavingPlayer)
+    if leavingPlayer == LocalPlayer then
+        cleanupConnections()
+    end
+end)
+
+VisualTab:Divider()
 
 local cosmetic1, cosmetic2 = ""  
 VisualTab:Space()  
@@ -2186,10 +2591,10 @@ VisualTab:Input({
         local match = findSimilar(v)
         if match then
             cosmetic1 = match
-            WindUI:Notify({Title = "Cosmetic Changer", Content = "Current: " .. match})
+            getgenv().WindUI:Notify({Title = "Cosmetic Changer", Content = "Current: " .. match})
             else
             cosmetic1 = ""
-            WindUI:Notify({Title = "Cosmetic Changer", Content = "This cosmetic was not found! "})
+            getgenv().WindUI:Notify({Title = "Cosmetic Changer", Content = "This cosmetic was not found! "})
         end
     end  
 })  
@@ -2206,10 +2611,10 @@ VisualTab:Input({
         local match = findSimilar(v)
         if match then
             cosmetic2 = match
-            WindUI:Notify({Title = "Cosmetic Changer", Content = "Select: " .. match})
+            getgenv().WindUI:Notify({Title = "Cosmetic Changer", Content = "Select: " .. match})
         else
             cosmetic2 = ""
-            WindUI:Notify({Title = "Cosmetic Changer", Content = "This cosmetic was not found! "})
+            getgenv().WindUI:Notify({Title = "Cosmetic Changer", Content = "This cosmetic was not found! "})
         end
     end  
 })  
@@ -2240,7 +2645,7 @@ VisualTab:Button({
 
             tempRoot:Destroy()
             
-            WindUI:Notify({Title = "Cosmetic Changer", Content = "Applied successfully!"})
+            getgenv().WindUI:Notify({Title = "Cosmetic Changer", Content = "Applied successfully!"})
         end)    
     end  
 })
@@ -2253,13 +2658,13 @@ local EmoteRemote = CharacterFolder:WaitForChild("Emote",10)
 local PassCharacterInfo = CharacterFolder:WaitForChild("PassCharacterInfo",10)
 local remoteSignal = PassCharacterInfo and PassCharacterInfo.OnClientEvent
 
-local currentTag = nil
-local currentEmotes = table.create(6,"")
-local selectEmotes = table.create(6,"")
-local emoteEnabled = table.create(6,false)
-local pendingSlot = nil
-local blockOriginalEmote = false
-local lastNum = nil
+getgenv().currentTag = nil
+getgenv().currentEmotes = table.create(6,"")
+getgenv().selectEmotes = table.create(6,"")
+getgenv().emoteEnabled = table.create(6,false)
+getgenv().pendingSlot = nil
+getgenv().blockOriginalEmote = false
+getgenv().lastNum = nil
 
 local function levenshtein(s1, s2)
     local len1 = #s1
@@ -2314,8 +2719,8 @@ local function setRandom()
     local c = LocalPlayer.Character
     if not c then return end
     local n = math.random(1,3)
-    if n ~= lastNum then
-        lastNum = n
+    if n ~= getgenv().lastNum then
+        getgenv().lastNum = n
         c:SetAttribute("EmoteNum",n)
     end
 end
@@ -2330,18 +2735,18 @@ local function readTagFromFolder(f)
 end
 
 local function onRespawn()
-    currentTag = nil
-    pendingSlot = nil
+    getgenv().currentTag = nil
+    getgenv().pendingSlot = nil
     task.spawn(function()
         local start = tick()
         while tick()-start < 10 do
             if workspace:FindFirstChild("Game") and workspace.Game:FindFirstChild("Players") then
                 local pf = workspace.Game.Players:FindFirstChild(LocalPlayer.Name)
                 if pf then
-                    currentTag = readTagFromFolder(pf)
-                    if currentTag then
-                        local b = tonumber(currentTag)
-                        if b and b >= 0 and b <= 255 then break else currentTag = nil end
+                    getgenv().currentTag = readTagFromFolder(pf)
+                    if getgenv().currentTag then
+                        local b = tonumber(getgenv().currentTag)
+                        if b and b >= 0 and b <= 255 then break else getgenv().currentTag = nil end
                     end
                 end
             end
@@ -2351,15 +2756,15 @@ local function onRespawn()
 end
 
 local function fireSelect(slot)
-    if not currentTag then return end
-    local b = tonumber(currentTag)
+    if not getgenv().currentTag then return end
+    local b = tonumber(getgenv().currentTag)
     if not b or b < 0 or b > 255 then return end
-    if not selectEmotes[slot] or selectEmotes[slot] == "" then return end
+    if not getgenv().selectEmotes[slot] or getgenv().selectEmotes[slot] == "" then return end
     local buf = buffer.create(2)
     buffer.writeu8(buf,0,b)
     buffer.writeu8(buf,1,17)
     if remoteSignal then
-        firesignal(remoteSignal,buf,{selectEmotes[slot]})
+        firesignal(remoteSignal,buf,{getgenv().selectEmotes[slot]})
     end
 end
 
@@ -2370,21 +2775,21 @@ oldNamecall = hookmetamethod(game,"__namecall",function(self,...)
 
     if method == "FireServer" and self == EmoteRemote and type(args[1]) == "string" then
         for i = 1,6 do
-            if emoteEnabled[i] and currentEmotes[i] ~= "" and args[1] == currentEmotes[i] then
-                pendingSlot = i
-                blockOriginalEmote = true
+            if getgenv().emoteEnabled[i] and getgenv().currentEmotes[i] ~= "" and args[1] == getgenv().currentEmotes[i] then
+                getgenv().pendingSlot = i
+                getgenv().blockOriginalEmote = true
                 setRandom()
 
                 task.spawn(function()
                     task.wait(0.1)
-                    blockOriginalEmote = false
-                    if pendingSlot == i then
-                        pendingSlot = nil
+                    getgenv().blockOriginalEmote = false
+                    if getgenv().pendingSlot == i then
+                        getgenv().pendingSlot = nil
                         fireSelect(i)
                     end
                 end)
 
-                if blockOriginalEmote then
+                if getgenv().blockOriginalEmote then
                     return nil
                 end
             end
@@ -2402,7 +2807,7 @@ if workspace:FindFirstChild("Game") and workspace.Game:FindFirstChild("Players")
         if child.Name == LocalPlayer.Name then task.wait(0.5) onRespawn() end
     end)
     workspace.Game.Players.ChildRemoved:Connect(function(child)
-        if child.Name == LocalPlayer.Name then currentTag = nil pendingSlot = nil end
+        if child.Name == LocalPlayer.Name then getgenv().currentTag = nil getgenv().pendingSlot = nil end
     end)
 end
 
@@ -2412,20 +2817,20 @@ for i = 1,6 do
     VisualTab:Input({
         Title = "Current Emote "..i,
         Placeholder = "Enter current emote name",
-        Value = currentEmotes[i],
+        Value = getgenv().currentEmotes[i],
         Callback = function(v)
             if v == "" then
-                currentEmotes[i] = ""
+                getgenv().currentEmotes[i] = ""
                 return
             end
             
             local match = findBestMatch(v, emoteFolder)
             if match then
-                currentEmotes[i] = match
-                WindUI:Notify({Title = "Emote Changer",Content = "Current "..i..": "..match})
+                getgenv().currentEmotes[i] = match
+                getgenv().WindUI:Notify({Title = "Emote Changer",Content = "Current "..i..": "..match})
             else
-                currentEmotes[i] = ""
-                WindUI:Notify({Title = "Emote Changer",Content = "This emote was not found! "..i})
+                getgenv().currentEmotes[i] = ""
+                getgenv().WindUI:Notify({Title = "Emote Changer",Content = "This emote was not found! "..i})
             end
         end
     })
@@ -2433,20 +2838,20 @@ for i = 1,6 do
     VisualTab:Input({
         Title = "Select Emote "..i,
         Placeholder = "Enter select emote name",
-        Value = selectEmotes[i],
+        Value = getgenv().selectEmotes[i],
         Callback = function(v)
             if v == "" then
-                selectEmotes[i] = ""
+                getgenv().selectEmotes[i] = ""
                 return
             end
             
             local match = findBestMatch(v, emoteFolder)
             if match then
-                selectEmotes[i] = match
-                WindUI:Notify({Title = "Emote Changer",Content = "Select "..i..": "..match})
+                getgenv().selectEmotes[i] = match
+                getgenv().WindUI:Notify({Title = "Emote Changer",Content = "Select "..i..": "..match})
             else
-                selectEmotes[i] = ""
-                WindUI:Notify({Title = "Emote Changer",Content = "This emote was not found! "..i})
+                getgenv().selectEmotes[i] = ""
+                getgenv().WindUI:Notify({Title = "Emote Changer",Content = "This emote was not found! "..i})
             end
         end
     })
@@ -2455,8 +2860,8 @@ for i = 1,6 do
         Title = "Apply "..i,
         Icon = "solar:arrow-right-line-duotone",
         Callback = function()
-            emoteEnabled[i] = (currentEmotes[i] ~= "" and selectEmotes[i] ~= "")
-            WindUI:Notify({Title = "Emote Changer",Content = "Slot "..i.." applied!"})
+            getgenv().emoteEnabled[i] = (getgenv().currentEmotes[i] ~= "" and getgenv().selectEmotes[i] ~= "")
+            getgenv().WindUI:Notify({Title = "Emote Changer",Content = "Slot "..i.." applied!"})
         end
     })
 
@@ -2468,11 +2873,11 @@ VisualTab:Button({
     Icon = "solar:trash-bin-2-linear",
     Callback = function()
         for i = 1,6 do
-            currentEmotes[i] = ""
-            selectEmotes[i] = ""
-            emoteEnabled[i] = false
+            getgenv().currentEmotes[i] = ""
+            getgenv().selectEmotes[i] = ""
+            getgenv().emoteEnabled[i] = false
         end
-        WindUI:Notify({Title = "Emote Changer",Content = "All emotes reset!"})
+        getgenv().WindUI:Notify({Title = "Emote Changer",Content = "All emotes reset!"})
     end
 })
 
@@ -2486,7 +2891,7 @@ VisualTab:Input({
         if num then
             pcall(function()
                 LocalPlayer:SetAttribute("Streak", num)
-                WindUI:Notify({
+                getgenv().WindUI:Notify({
                     Title = "Streak",
                     Content = string.format("Streak set to %d", num),
                     Duration = 3
@@ -2499,7 +2904,7 @@ VisualTab:Input({
 SettingsTab:Section({Title = "Settings"})
 
 local themeValues = {}
-for name, _ in pairs(WindUI:GetThemes()) do
+for name, _ in pairs(getgenv().WindUI:GetThemes()) do
     table.insert(themeValues, name)
 end
 
@@ -2509,11 +2914,11 @@ local themeDropdown = SettingsTab:Dropdown({
     AllowNone = false,
     Values = themeValues,
     Callback = function(theme)
-        WindUI:SetTheme(theme)
+        getgenv().WindUI:SetTheme(theme)
     end
 })
 
-themeDropdown:Select(WindUI:GetCurrentTheme())
+themeDropdown:Select(getgenv().WindUI:GetCurrentTheme())
 
 local currentBackground = "rbxassetid://85878831310179"
 
@@ -2557,7 +2962,7 @@ SettingsTab:Toggle({
     Callback = function(e)
         Window:ToggleTransparency(e)
     end,
-    Value = WindUI:GetTransparency()
+    Value = getgenv().WindUI:GetTransparency()
 })
 
 local ConfigManager = Window.ConfigManager
@@ -2567,7 +2972,7 @@ SettingsTab:Button({
     Title = "Save Configuration",
     Callback = function()
         myConfig:Save()
-        WindUI:Notify({
+        getgenv().WindUI:Notify({
             Title = "Configuration",
             Content = "Settings saved successfully!",
             Duration = 3
@@ -2579,7 +2984,7 @@ SettingsTab:Button({
     Title = "Load Configuration",
     Callback = function()
         myConfig:Load()
-        WindUI:Notify({
+        getgenv().WindUI:Notify({
             Title = "Configuration",
             Content = "Settings loaded successfully!",
             Duration = 3
@@ -2620,7 +3025,7 @@ local function createSimpleTimer()
     
     task.spawn(function()
         while true do
-            if FeatureStates.TimerDisplay then
+            if getgenv().FeatureStates.TimerDisplay then
                 toggleTimer(true)
             else
                 toggleTimer(false)
@@ -2636,11 +3041,11 @@ createSimpleTimer()
 -- CLEANUP FOR FRONT JUMP
 -- ================================
 LocalPlayer.CharacterRemoving:Connect(function()
-    if frontJumpVelocity then
-        frontJumpVelocity:Destroy()
-        frontJumpVelocity = nil
+    if getgenv().frontJumpVelocity then
+        getgenv().frontJumpVelocity:Destroy()
+        getgenv().frontJumpVelocity = nil
     end
-    FeatureStates.FrontJumpEnabled = false
+    getgenv().FeatureStates.FrontJumpEnabled = false
 end)
 
 game:GetService("Players").PlayerRemoving:Connect(function(player)
@@ -2648,26 +3053,26 @@ game:GetService("Players").PlayerRemoving:Connect(function(player)
         cleanupESP()
         cleanupTracers()
         
-        if tracerThread then
-            coroutine.close(tracerThread)
+        if getgenv().tracerThread then
+            coroutine.close(getgenv().tracerThread)
         end
         
-        for name, thread in pairs(espThreads) do
+        for name, thread in pairs(getgenv().espThreads) do
             if thread then
                 coroutine.close(thread)
             end
         end
         
-        if bhopConnection then
-            bhopConnection:Disconnect()
+        if getgenv().bhopConnection then
+            getgenv().bhopConnection:Disconnect()
         end
         
-        if infiniteSlideHeartbeat then
-            infiniteSlideHeartbeat:Disconnect()
+        if getgenv().infiniteSlideHeartbeat then
+            getgenv().infiniteSlideHeartbeat:Disconnect()
         end
         
-        if infiniteSlideCharacterConn then
-            infiniteSlideCharacterConn:Disconnect()
+        if getgenv().infiniteSlideCharacterConn then
+            getgenv().infiniteSlideCharacterConn:Disconnect()
         end
         
         if respawnConnection then
@@ -2678,40 +3083,49 @@ game:GetService("Players").PlayerRemoving:Connect(function(player)
             AutoSelfReviveConnection:Disconnect()
         end
         
-        if InstantReviveConnection then
-            InstantReviveConnection:Disconnect()
+        if getgenv().InstantReviveConnection then
+            getgenv().InstantReviveConnection:Disconnect()
         end
         
-        if AutoTicketFarmConnection then
-            AutoTicketFarmConnection:Disconnect()
-            AutoTicketFarmConnection = nil
+        if getgenv().AutoTicketFarmConnection then
+            getgenv().AutoTicketFarmConnection:Disconnect()
+            getgenv().AutoTicketFarmConnection = nil
         end
         
-        if FeatureStates.AutoMoneyFarmConnection then
-            FeatureStates.AutoMoneyFarmConnection:Disconnect()
-            FeatureStates.AutoMoneyFarmConnection = nil
+        if getgenv().AutoMoneyFarmConnection then
+            getgenv().AutoMoneyFarmConnection:Disconnect()
+            getgenv().AutoMoneyFarmConnection = nil
         end
         
-        if ScreenStretchConn then
-            ScreenStretchConn:Disconnect()
-            ScreenStretchConn = nil
+        if getgenv().ScreenStretchConn then
+            getgenv().ScreenStretchConn:Disconnect()
+            getgenv().ScreenStretchConn = nil
         end
         
-        if AutoCarryConnection then
-            AutoCarryConnection:Disconnect()
+        if getgenv().AutoCarryConnection then
+            getgenv().AutoCarryConnection:Disconnect()
+        end
+        
+        if getgenv().antiAFK.Connection then
+            getgenv().antiAFK.Connection:Disconnect()
+            getgenv().antiAFK.Connection = nil
         end
 
-        if AutoTrimpVelocity then
-            AutoTrimpVelocity:Destroy()
-            AutoTrimpVelocity = nil
+        if getgenv().activeBV then
+            getgenv().activeBV:Destroy()
+            getgenv().activeBV = nil
         end
         
-        if frontJumpVelocity then
-            frontJumpVelocity:Destroy()
-            frontJumpVelocity = nil
+        if getgenv().GameTimerUI.Enabled then
+        getgenv().GameTimerUI.StartTime = tick()
         end
         
-        for _, toggle in pairs(featureToggles) do
+        if getgenv().frontJumpVelocity then
+            getgenv().frontJumpVelocity:Destroy()
+            getgenv().frontJumpVelocity = nil
+        end
+        
+        for _, toggle in pairs(getgenv().featureToggles) do
             if toggle and toggle.Gui then
                 pcall(function()
                     toggle.Gui:Destroy()
