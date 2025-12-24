@@ -3413,7 +3413,7 @@ createSimpleTimer()
 WindUI:Notify({
     Title = "From SYFTA",
     Content = "🎄MERRY CHRISTMAS ALL🎄",
-    Duration = 3, -- 3 seconds
+    Duration = 8, -- 8 seconds
     Icon = "heart",
 })
 -- ================================
