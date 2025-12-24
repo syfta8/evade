@@ -143,7 +143,7 @@ getgenv().FeatureStates = {
 }
 
 local Window = getgenv().WindUI:CreateWindow({
-    Title = "WeroShiny (Beta)",
+    Title = "🎄WeroShiny Hub🎄",
     Icon = "gamepad",
     Author = "Pnsdg, t.me/ItsYomka and Syfta",
     IconThemed = true,
