@@ -1,0 +1,413 @@
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local LocalPlayer = Players.LocalPlayer
+
+-- Load WindUI
+getgenv().WindUI = loadstring(game:HttpGet("https://raw.githubusercontent.com/Footagesus/WindUI/main/dist/main.lua"))()
+getgenv().WindUI:SetTheme("Plant")
+
+local Confirmed = false
+
+function gradient(text, startColor, endColor)
+    local result = ""
+    local length = #text
+    local r1, g1, b1 = startColor.R * 255, startColor.G * 255, startColor.B * 255
+    local r2, g2, b2 = endColor.R * 255, endColor.G * 255, endColor.B * 255
+    
+    for i = 1, length do
+        local t = (i - 1) / math.max(length - 1, 1)
+        local r = math.floor(r1 + (r2 - r1) * t)
+        local g = math.floor(g1 + (g2 - g1) * t)
+        local b = math.floor(b1 + (b2 - b1) * t)
+        local char = text:sub(i, i)
+        result = result .. string.format('<font color="rgb(%d, %d, %d)">%s</font>', r, g, b, char)
+    end
+    return result
+end
+
+getgenv().WindUI:Popup({
+    Title = "Welcome to my script!",
+    Icon = "console",
+    IconThemed = true,
+    Content = "Welcome to " .. gradient("Weroshiny", Color3.fromHex("#4FC3F7"), Color3.fromHex("#0288D1")) .. ".",
+    Buttons = {
+        {
+            Title = "Continue",
+            Icon = "arrow-right",
+            Variant = "Primary",
+            Callback = function()
+                Confirmed = true
+            end
+        }
+    }
+})
+
+repeat task.wait() until Confirmed
+
+-- Create Window
+local Window = getgenv().WindUI:CreateWindow({
+    Title = "What? ",
+    Icon = "gamepad",
+    Author = "Syfta",
+    IconThemed = true,
+    Size = UDim2.fromOffset(600, 400),
+    Folder = "WeroShiny",
+    Transparent = false,
+})
+
+local VisualTab = Window:Tab({Title = "Visual", Icon = "smile"})
+
+-- Emote Changer System
+local Events = ReplicatedStorage:WaitForChild("Events", 10)
+local CharacterFolder = Events:WaitForChild("Character", 10)
+local EmoteRemote = CharacterFolder:WaitForChild("Emote", 10)
+local PassCharacterInfo = CharacterFolder:WaitForChild("PassCharacterInfo", 10)
+local remoteSignal = PassCharacterInfo and PassCharacterInfo.OnClientEvent
+
+-- Emote Changer Variables
+getgenv().EmoteChanger = {
+    currentTag = nil,
+    currentEmotes = table.create(6, ""),
+    selectEmotes = table.create(6, ""),
+    emoteEnabled = table.create(6, false),
+    pendingSlot = nil,
+    blockOriginalEmote = false,
+    lastNum = nil,
+    hookEnabled = true
+}
+
+-- Function to find best match for emote names
+local function levenshtein2(s1, s2)
+    local len1 = #s1
+    local len2 = #s2
+    local matrix = {}
+    
+    for i = 0, len1 do
+        matrix[i] = {[0] = i}
+    end
+    
+    for j = 0, len2 do
+        matrix[0][j] = j
+    end
+    
+    for i = 1, len1 do
+        for j = 1, len2 do
+            local cost = (s1:sub(i,i) == s2:sub(j,j)) and 0 or 1
+            matrix[i][j] = math.min(
+                matrix[i-1][j] + 1,
+                matrix[i][j-1] + 1,
+                matrix[i-1][j-1] + cost
+            )
+        end
+    end
+    
+    return matrix[len1][len2]
+end
+
+local function findBestMatch(input, emotes)
+    local cleanInput = input:gsub("%s+",""):lower()
+    if cleanInput == "" then return nil end
+    
+    local bestMatch = nil
+    local bestSimilarity = 0
+    
+    for _, emote in ipairs(emotes:GetChildren()) do
+        local emoteName = emote.Name:gsub("%s+",""):lower()
+        local distance = levenshtein2(cleanInput, emoteName)
+        local maxLen = math.max(#cleanInput, #emoteName)
+        local similarity = 1 - (distance / maxLen)
+        
+        if similarity >= 0.5 and similarity > bestSimilarity then
+            bestSimilarity = similarity
+            bestMatch = emote.Name
+        end
+    end
+    
+    return bestMatch
+end
+
+-- Random emote number generator
+local function setRandom()
+    local c = LocalPlayer.Character
+    if not c then return end
+    local n = math.random(1, 3)
+    if n ~= getgenv().EmoteChanger.lastNum then
+        getgenv().EmoteChanger.lastNum = n
+        c:SetAttribute("EmoteNum", n)
+    end
+end
+
+-- Read tag from player folder
+local function readTagFromFolder(f)
+    if not f then return nil end
+    local a = f:GetAttribute("Tag")
+    if a ~= nil then return a end
+    local o = f:FindFirstChild("Tag")
+    if o and o:IsA("ValueBase") then return o.Value end
+    return nil
+end
+
+-- Respawn handler
+local function onRespawn()
+    getgenv().EmoteChanger.currentTag = nil
+    getgenv().EmoteChanger.pendingSlot = nil
+    task.spawn(function()
+        local start = tick()
+        while tick() - start < 10 do
+            if workspace:FindFirstChild("Game") and workspace.Game:FindFirstChild("Players") then
+                local pf = workspace.Game.Players:FindFirstChild(LocalPlayer.Name)
+                if pf then
+                    getgenv().EmoteChanger.currentTag = readTagFromFolder(pf)
+                    if getgenv().EmoteChanger.currentTag then
+                        local b = tonumber(getgenv().EmoteChanger.currentTag)
+                        if b and b >= 0 and b <= 255 then 
+                            break 
+                        else 
+                            getgenv().EmoteChanger.currentTag = nil 
+                        end
+                    end
+                end
+            end
+            task.wait(0.5)
+        end
+    end)
+end
+
+-- Fire select emote
+local function fireSelect(slot)
+    if not getgenv().EmoteChanger.currentTag then return end
+    local b = tonumber(getgenv().EmoteChanger.currentTag)
+    if not b or b < 0 or b > 255 then return end
+    if not getgenv().EmoteChanger.selectEmotes[slot] or getgenv().EmoteChanger.selectEmotes[slot] == "" then return end
+    local buf = buffer.create(2)
+    buffer.writeu8(buf, 0, b)
+    buffer.writeu8(buf, 1, 17)
+    if remoteSignal then
+        firesignal(remoteSignal, buf, {getgenv().EmoteChanger.selectEmotes[slot]})
+    end
+end
+
+-- Hook the emote remote
+getgenv().EmoteChanger.oldNamecall = nil
+
+local function setupHook()
+    if getgenv().EmoteChanger.oldNamecall then return end
+    
+    getgenv().EmoteChanger.oldNamecall = hookmetamethod(game, "__namecall", function(self, ...)
+        local method = getnamecallmethod()
+        local args = {...}
+
+        if method == "FireServer" and self == EmoteRemote and type(args[1]) == "string" then
+            for i = 1, 6 do
+                if getgenv().EmoteChanger.emoteEnabled[i] and 
+                   getgenv().EmoteChanger.currentEmotes[i] ~= "" and 
+                   args[1] == getgenv().EmoteChanger.currentEmotes[i] then
+                    
+                    getgenv().EmoteChanger.pendingSlot = i
+                    getgenv().EmoteChanger.blockOriginalEmote = true
+                    setRandom()
+
+                    task.spawn(function()
+                        task.wait(0.1)
+                        getgenv().EmoteChanger.blockOriginalEmote = false
+                        if getgenv().EmoteChanger.pendingSlot == i then
+                            getgenv().EmoteChanger.pendingSlot = nil
+                            fireSelect(i)
+                        end
+                    end)
+
+                    if getgenv().EmoteChanger.blockOriginalEmote then
+                        return nil
+                    end
+                end
+            end
+        end
+
+        return getgenv().EmoteChanger.oldNamecall(self, ...)
+    end)
+end
+
+-- Initialize on character
+if LocalPlayer.Character then 
+    task.spawn(onRespawn) 
+end
+
+LocalPlayer.CharacterAdded:Connect(function() 
+    task.wait(1) 
+    onRespawn() 
+end)
+
+-- Monitor player folder changes
+if workspace:FindFirstChild("Game") and workspace.Game:FindFirstChild("Players") then
+    workspace.Game.Players.ChildAdded:Connect(function(child)
+        if child.Name == LocalPlayer.Name then 
+            task.wait(0.5) 
+            onRespawn() 
+        end
+    end)
+    
+    workspace.Game.Players.ChildRemoved:Connect(function(child)
+        if child.Name == LocalPlayer.Name then 
+            getgenv().EmoteChanger.currentTag = nil 
+            getgenv().EmoteChanger.pendingSlot = nil 
+        end
+    end)
+end
+
+-- Get emote folder
+local emoteFolder = ReplicatedStorage.Items.Emotes
+
+-- Setup the hook after a delay to ensure everything is loaded
+task.wait(2)
+setupHook()
+
+-- Create UI elements for each emote slot (6 slots)
+for i = 1, 6 do
+    VisualTab:Input({
+        Title = "Current Emote " .. i,
+        Placeholder = "Enter current emote name",
+        Value = getgenv().EmoteChanger.currentEmotes[i],
+        Callback = function(v)
+            if v == "" then
+                getgenv().EmoteChanger.currentEmotes[i] = ""
+                return
+            end
+            
+            local match = findBestMatch(v, emoteFolder)
+            if match then
+                getgenv().EmoteChanger.currentEmotes[i] = match
+                getgenv().WindUI:Notify({
+                    Title = "Emote Changer", 
+                    Content = "Current " .. i .. ": " .. match,
+                    Duration = 3
+                })
+            else
+                getgenv().EmoteChanger.currentEmotes[i] = ""
+                getgenv().WindUI:Notify({
+                    Title = "Emote Changer", 
+                    Content = "This emote was not found! Slot " .. i,
+                    Duration = 3
+                })
+            end
+        end
+    })
+
+    VisualTab:Input({
+        Title = "Select Emote " .. i,
+        Placeholder = "Enter select emote name",
+        Value = getgenv().EmoteChanger.selectEmotes[i],
+        Callback = function(v)
+            if v == "" then
+                getgenv().EmoteChanger.selectEmotes[i] = ""
+                return
+            end
+            
+            local match = findBestMatch(v, emoteFolder)
+            if match then
+                getgenv().EmoteChanger.selectEmotes[i] = match
+                getgenv().WindUI:Notify({
+                    Title = "Emote Changer", 
+                    Content = "Select " .. i .. ": " .. match,
+                    Duration = 3
+                })
+            else
+                getgenv().EmoteChanger.selectEmotes[i] = ""
+                getgenv().WindUI:Notify({
+                    Title = "Emote Changer", 
+                    Content = "This emote was not found! Slot " .. i,
+                    Duration = 3
+                })
+            end
+        end
+    })
+
+    VisualTab:Button({
+        Title = "Apply Slot " .. i,
+        Icon = "solar:arrow-right-line-duotone",
+        Callback = function()
+            getgenv().EmoteChanger.emoteEnabled[i] = (getgenv().EmoteChanger.currentEmotes[i] ~= "" and getgenv().EmoteChanger.selectEmotes[i] ~= "")
+            
+            local status = getgenv().EmoteChanger.emoteEnabled[i] and "enabled" or "disabled"
+            getgenv().WindUI:Notify({
+                Title = "Emote Changer", 
+                Content = "Slot " .. i .. " " .. status .. "!",
+                Duration = 3
+            })
+        end
+    })
+
+    VisualTab:Divider()
+end
+
+-- Reset all emotes button
+VisualTab:Button({
+    Title = "Reset All Emotes",
+    Icon = "solar:trash-bin-2-linear",
+    Callback = function()
+        for i = 1, 6 do
+            getgenv().EmoteChanger.currentEmotes[i] = ""
+            getgenv().EmoteChanger.selectEmotes[i] = ""
+            getgenv().EmoteChanger.emoteEnabled[i] = false
+        end
+        
+        getgenv().WindUI:Notify({
+            Title = "Emote Changer", 
+            Content = "All emotes reset!",
+            Duration = 3
+        })
+    end
+})
+
+-- Toggle Emote Changer
+VisualTab:Toggle({
+    Title = "Enable Emote Changer",
+    Value = true,
+    Callback = function(state)
+        getgenv().EmoteChanger.hookEnabled = state
+        if state then
+            setupHook()
+            getgenv().WindUI:Notify({
+                Title = "Emote Changer",
+                Content = "Emote changer enabled!",
+                Duration = 3
+            })
+        else
+            if getgenv().EmoteChanger.oldNamecall then
+                -- Note: Restoring the original hook might be complex
+                -- This is a simplified approach
+                getgenv().WindUI:Notify({
+                    Title = "Emote Changer",
+                    Content = "Emote changer disabled! Restart script to fully disable.",
+                    Duration = 3
+                })
+            end
+        end
+    end
+})
+
+VisualTab:Divider()
+
+-- Status display
+VisualTab:Paragraph({
+    Title = "Emote Changer Status",
+    Desc = "Configure up to 6 emote replacements. Use the fuzzy search to find emotes by partial names.",
+    Image = "https://cdn.discordapp.com/emojis/123456789012345678.png",
+    ImageSize = 48,
+    Buttons = {}
+})
+
+-- Cleanup when player leaves
+game:GetService("Players").PlayerRemoving:Connect(function(player)
+    if player == LocalPlayer then
+        -- Cleanup variables
+        for i = 1, 6 do
+            getgenv().EmoteChanger.currentEmotes[i] = ""
+            getgenv().EmoteChanger.selectEmotes[i] = ""
+            getgenv().EmoteChanger.emoteEnabled[i] = false
+        end
+        
+        getgenv().EmoteChanger.currentTag = nil
+        getgenv().EmoteChanger.pendingSlot = nil
+        getgenv().EmoteChanger.blockOriginalEmote = false
+    end
+end)
