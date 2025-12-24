@@ -3409,6 +3409,13 @@ end
 
 createSimpleTimer()
 
+
+WindUI:Notify({
+    Title = "From SYFTA",
+    Content = "🎄MERRY CHRISTMAS ALL🎄",
+    Duration = 3, -- 3 seconds
+    Icon = "heart",
+})
 -- ================================
 -- CLEANUP FOR FRONT JUMP
 -- ================================
