@@ -1909,6 +1909,149 @@ AutoTab:Toggle({
 
 FPSTab:Divider()
 
+FPSTab:Button({  
+    Title = "LowerChunks",  
+    Description = "Reduces the streaming radius for performance improvement",  
+    Callback = function()  
+        workspace.StreamingMinRadius = 200  
+        workspace.StreamingTargetRadius = 500  
+    end  
+})  
+
+FPSTab:Button({  
+    Title = "DisableVSync",  
+    Description = "Disables vertical sync to allow higher FPS",  
+    Callback = function()  
+        setfpscap(9999)  
+    end  
+})  
+
+
+FPSTab:Button({  
+    Title = "SetFpsCapMax",  
+    Description = "Sets the FPS cap to a very high value",  
+    Callback = function()  
+        setfpscap(99999)  
+    end  
+})  
+
+
+FPSTab:Button({  
+    Title = "HideSkybox",  
+    Description = "Removes the skybox for better performance",  
+    Callback = function()  
+        game.Lighting.Sky = nil  
+    end  
+})  
+
+
+FPSTab:Button({  
+    Title = "DisableShadows",  
+    Description = "Disables all shadows in the workspace",  
+    Callback = function()  
+        for _, part in pairs(workspace:GetDescendants()) do  
+            if part:IsA("BasePart") then  
+                part.CastShadow = false  
+            end  
+        end  
+    end  
+})  
+
+
+FPSTab:Button({  
+    Title = "SetLowGraphics",  
+    Description = "Sets the rendering quality to low",  
+    Callback = function()  
+        settings().Rendering.QualityLevel = 1  
+    end  
+})  
+
+
+FPSTab:Button({  
+    Title = "DisableParticles",  
+    Description = "Removes all particle effects from the game",  
+    Callback = function()  
+        for _, particle in pairs(workspace:GetDescendants()) do  
+            if particle:IsA("ParticleEmitter") then  
+                particle:Destroy()  
+            end  
+        end  
+    end  
+})  
+
+
+FPSTab:Button({  
+    Title = "Night",  
+    Description = "Sets the time to night (00:00)",  
+    Callback = function()  
+        game.Lighting.TimeOfDay = "00:00:00"  
+    end  
+})  
+
+FPSTab:Button({  
+    Title = "Day",  
+    Description = "Sets the time to morning (08:00)",  
+    Callback = function()  
+        game.Lighting.TimeOfDay = "08:00:00"  
+    end  
+})  
+
+
+FPSTab:Button({  
+    Title = "AntiFog",  
+    Description = "Removes fog for better visibility",  
+    Callback = function()  
+        local L = game.Lighting  
+        L.FogStart = 1e5  
+        L.FogEnd = 1e6  
+    end  
+})  
+
+
+FPSTab:Button({  
+    Title = "LowPolyMode",  
+    Description = "Converts meshes to low-poly for performance",  
+    Callback = function()  
+        for _, p in pairs(workspace:GetDescendants()) do  
+            if p:IsA("MeshPart") or p:IsA("UnionOperation") then  
+                p.Material = Enum.Material.Plastic  
+                p.RenderFidelity = Enum.RenderFidelity.Performance  
+            end  
+        end  
+    end  
+})  
+
+
+FPSTab:Button({  
+    Title = "DisableSimplifyLighting",  
+    Description = "Disables lighting simplifications for custom settings",  
+    Callback = function()  
+        local L = game.Lighting  
+        L.Technology = Enum.Technology.Compatibility  
+        L.ShadowSoftness = 0  
+        L.EnvironmentDiffuseScale = 0  
+        L.EnvironmentSpecularScale = 0  
+    end  
+})  
+
+FPSTab:Button({  
+    Title = "HideUselessChunks",  
+    Description = "Reduces streaming of unnecessary chunks",  
+    Callback = function()  
+        workspace.StreamingMinRadius = 0  
+        workspace.StreamingTargetRadius = 500  
+    end  
+})  
+
+
+FPSTab:Button({  
+    Title = "ReduceAntiAliasing",  
+    Description = "Reduces anti-aliasing for performance",  
+    Callback = function()  
+        game:GetService("Rendering"):SetCore("AntiAliasing", Enum.AntiAliasingLevel.Two)  
+    end  
+})
+
 FPSTab:Toggle({
     Title = "full bright",
     Desc = "not mine.",
