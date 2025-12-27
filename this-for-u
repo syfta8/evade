@@ -123,7 +123,7 @@ getgenv().FeatureStates = {
     AutoCarry = false,
     BhopEnabled = false,
     BhopMode = "Acceleration",
-    BhopAccelValue = -999999,
+    BhopAccelValue = -0.1,
     SelectedEmote = nil,
     EmoteEnabled = false,
     LagSwitchEnabled = false,
@@ -140,12 +140,12 @@ getgenv().FeatureStates = {
     AutoMoneyFarm = false,
     AutoTrimpEnabled = false,
     AntiAFK = true,
-    UnlimitedCola = true,
-    
+    FixColaAnimation = false,
+    FixColaHookEnabled = false,
 }
 
 local Window = getgenv().WindUI:CreateWindow({
-    Title = "WeroShiny (Beta)",
+    Title = "🎄WeroShiny Hub🎄",
     Icon = "gamepad",
     Author = "Pnsdg, t.me/ItsYomka and Syfta",
     IconThemed = true,
@@ -154,7 +154,7 @@ local Window = getgenv().WindUI:CreateWindow({
     Transparent = false,
 })
 
-local InfoTab = Window:Tab({Title = "Info", Icon = "message-circle"})
+local InfoTab = Window:Tab({Title = "🎄Info🎄", Icon = "message-circle"})
 local PlayerTab = Window:Tab({Title = "Player", Icon = "book-open"})
 local AutoTab = Window:Tab({Title = "Auto", Icon = "check"})
 local FPSTab = Window:Tab({Title = "FPS", Icon = "monitor"})
@@ -2534,6 +2534,85 @@ VisualTab:Slider({
 
 VisualTab:Divider()
 
+-- Input untuk memasukkan Music ID
+VisualTab:Input({
+    Title = "Music ID",
+    Desc = "Masukkan ID musik dari Roblox",
+    Value = "",
+    PlaceholderText = "Contoh: 1837532419",
+    ClearTextOnFocus = false,
+    Callback = function(musicId)
+        -- Validasi input
+        if musicId == "" or not tonumber(musicId) then
+            WindUI:Notify({
+                Title = "Error",
+                Content = "Masukkan ID yang valid!",
+                Icon = "alert-circle",
+                Duration = 3
+            })
+            return
+        end
+        
+        -- Hentikan semua musik yang sedang diputar
+        for _, child in pairs(game:GetService("Workspace"):GetChildren()) do
+            if child:IsA("Sound") then
+                child:Stop()
+                child:Destroy()
+            end
+        end
+        
+        -- Buat sound object baru
+        local sound = Instance.new("Sound")
+        sound.Parent = game:GetService("Workspace")
+        sound.SoundId = "rbxassetid://" .. musicId
+        sound.Volume = 5
+        sound.Looped = true
+        sound:Play()
+        
+        -- Simpan referensi
+        if not _G.CurrentMusic then
+            _G.CurrentMusic = {}
+        end
+        _G.CurrentMusic.Sound = sound
+        _G.CurrentMusic.Id = musicId
+        
+        WindUI:Notify({
+            Title = "Music Playing",
+            Content = "Memutar musik ID: " .. musicId,
+            Icon = "music",
+            Duration = 3
+        })
+    end
+})
+
+-- Button untuk menghentikan musik
+VisualTab:Button({
+    Title = "Stop Music",
+    Desc = "Menghentikan semua musik",
+    Callback = function()
+        local stoppedCount = 0
+        
+        -- Hentikan semua sound di Workspace
+        for _, child in pairs(game:GetService("Workspace"):GetChildren()) do
+            if child:IsA("Sound") then
+                child:Stop()
+                child:Destroy()
+                stoppedCount = stoppedCount + 1
+            end
+        end
+        
+        -- Reset current music
+        _G.CurrentMusic = nil
+        
+        WindUI:Notify({
+            Title = "Music Stopped",
+            Content = "Menghentikan " .. stoppedCount .. " musik",
+            Icon = "stop-circle",
+            Duration = 3
+        })
+    end
+})
+
 VisualTab:Toggle({
     Title = "bypass battlepass",
     Desc = "when u buy something the battlepass get normally",
@@ -2688,74 +2767,6 @@ VisualTab:Toggle({
 })
 
 VisualTab:Divider()
-
-VisualTab:Toggle({
-    Title = "Unlimited Cola",
-    Desc = "No one look u drink the colq",
-    Value = false,
-    Callback = function(state)
-        featureStates.UnlimitedCola = state
-        if state then
-            local ReplicatedStorage = game:GetService("ReplicatedStorage")
-            local RemoteEvent = ReplicatedStorage.Events.Character.ToolAction
-            local mt = getrawmetatable(RemoteEvent)
-            local oldNamecall = mt.__namecall
-            local recentBlockTime = 0
-            local blockCooldown = 0.1
-            setreadonly(mt, false)
-            mt.__namecall = newcclosure(function(self, ...)
-                local method = getnamecallmethod()
-                local args = {...}
-                if method == "FireServer" and args[2] == 19 then
-                    local currentTime = tick()
-                    if currentTime - recentBlockTime >= blockCooldown then
-                        recentBlockTime = currentTime
-                        return nil
-                    end
-                end
-                return oldNamecall(self, ...)
-            end)
-            setreadonly(mt, true)
-            featureStates.ColaMetatableHook = { mt = mt, oldNamecall = oldNamecall }
-            local Players = game:GetService("Players")
-            local player = Players.LocalPlayer
-            local events = player.PlayerScripts.Events.temporary_events
-            featureStates.ColaEventConnection = events.UseKeybind.Event:Connect(function(args)
-                if args.Forced and args.Key == "Cola" and args.Down then
-                    wait(2.15)
-                    firesignal(game:GetService("ReplicatedStorage").Events.Character.SpeedBoost.OnClientEvent, "Cola", 1.4, 3.5, Color3.fromRGB(199, 141, 93))
-                end
-            end)
-        else
-            if featureStates.ColaMetatableHook then
-                local mt = featureStates.ColaMetatableHook.mt
-                local oldNamecall = featureStates.ColaMetatableHook.oldNamecall
-                setreadonly(mt, false)
-                mt.__namecall = oldNamecall
-                setreadonly(mt, true)
-                featureStates.ColaMetatableHook = nil
-            end
-            if featureStates.ColaEventConnection then
-                featureStates.ColaEventConnection:Disconnect()
-                featureStates.ColaEventConnection = nil
-            end
-        end
-    end
-})
-
-VisualTab:Button({
-    Title = "Clear Invis Walls",
-    Callback = function()
-        local invisPartsFolder = workspace:FindFirstChild("Game") and workspace.Game:FindFirstChild("Map") and workspace.Game.Map:FindFirstChild("InvisParts")
-        if invisPartsFolder then
-            for _, obj in ipairs(invisPartsFolder:GetDescendants()) do
-                if obj:IsA("BasePart") then
-                    obj.CanCollide = false
-                end
-            end
-        end
-    end
-})
 
 VisualTab:Toggle({
     Title = "full bright",
@@ -2974,6 +2985,114 @@ VisualTab:Toggle({
 game:GetService("Players").PlayerRemoving:Connect(function(leavingPlayer)
     if leavingPlayer == LocalPlayer then
         cleanupConnections()
+    end
+end)
+
+VisualTab:Toggle({
+    Title = "Fix Animation Cola",
+    Desc = "Fixes the cola animation glitch",
+    Value = getgenv().FeatureStates.FixColaAnimation,
+    Callback = function(state)
+        getgenv().FeatureStates.FixColaAnimation = state
+        
+        if state then
+            -- Terapkan hook
+            local success, errorMsg = pcall(function()
+                local Event = game:GetService("Players").LocalPlayer.PlayerScripts.Events.temporary_events.UseKeybind
+
+                -- Cek apakah hook sudah ada
+                if getgenv().FeatureStates.FixColaHookEnabled then
+                    getgenv().WindUI:Notify({
+                        Title = "Animation Fix",
+                        Content = "Hook already applied!",
+                        Duration = 3
+                    })
+                    return
+                end
+
+                local mt = getrawmetatable(Event)
+                local oldNamecall = mt.__namecall
+
+                setreadonly(mt, false)
+                mt.__namecall = newcclosure(function(self, ...)
+                    local method = getnamecallmethod()
+                    local args = {...}
+                    
+                    if (method == "Fire" or method == "FireServer") and self == Event then
+                        if args[1] and args[1].Key and args[1].Key == "Cola" then
+                            game:GetService("ReplicatedStorage").Events.Character.ToolAction:FireServer(0,19)
+                            -- Return a dummy value instead of nil
+                            return wait()
+                        end
+                    end
+                    
+                    return oldNamecall(self, ...)
+                end)
+                setreadonly(mt, true)
+                
+                getgenv().FeatureStates.FixColaHookEnabled = true
+                
+                -- Simpan reference untuk nanti
+                getgenv().ColaFixData = {
+                    OldNamecall = oldNamecall,
+                    Event = Event
+                }
+            end)
+            
+            if success then
+                getgenv().WindUI:Notify({
+                    Title = "Animation Fix",
+                    Content = "Cola animation fix applied!",
+                    Duration = 3
+                })
+            else
+                getgenv().WindUI:Notify({
+                    Title = "Animation Fix Error",
+                    Content = "Failed to apply: " .. tostring(errorMsg),
+                    Duration = 5
+                })
+                getgenv().FeatureStates.FixColaAnimation = false
+            end
+        else
+            -- Nonaktifkan hook
+            if getgenv().FeatureStates.FixColaHookEnabled and getgenv().ColaFixData then
+                pcall(function()
+                    local mt = getrawmetatable(getgenv().ColaFixData.Event)
+                    setreadonly(mt, false)
+                    mt.__namecall = getgenv().ColaFixData.OldNamecall
+                    setreadonly(mt, true)
+                end)
+                
+                getgenv().FeatureStates.FixColaHookEnabled = false
+                getgenv().ColaFixData = nil
+                
+                getgenv().WindUI:Notify({
+                    Title = "Animation Fix",
+                    Content = "Cola animation fix removed!",
+                    Duration = 3
+                })
+            end
+        end
+    end
+})
+
+game:GetService("Players").PlayerRemoving:Connect(function(player)
+    if player == LocalPlayer then
+        -- ... cleanup lainnya ...
+        
+        -- Cleanup untuk Fix Cola Animation
+        if getgenv().FeatureStates.FixColaHookEnabled and getgenv().ColaFixData then
+            pcall(function()
+                local mt = getrawmetatable(getgenv().ColaFixData.Event)
+                setreadonly(mt, false)
+                mt.__namecall = getgenv().ColaFixData.OldNamecall
+                setreadonly(mt, true)
+            end)
+        end
+        getgenv().FeatureStates.FixColaHookEnabled = false
+        getgenv().ColaFixData = nil
+        
+        -- ... cleanup lainnya ...
     end
 end)
 
@@ -3479,6 +3598,13 @@ end
 
 createSimpleTimer()
 
+
+WindUI:Notify({
+    Title = "From SYFTA",
+    Content = "🎄MERRY CHRISTMAS ALL🎄",
+    Duration = 3, -- 3 seconds
+    Icon = "heart",
+})
 -- ================================
 -- CLEANUP FOR FRONT JUMP
 -- ================================
@@ -3580,11 +3706,6 @@ game:GetService("Players").PlayerRemoving:Connect(function(player)
         if getgenv().frontJumpVelocity then
             getgenv().frontJumpVelocity:Destroy()
             getgenv().frontJumpVelocity = nil
-        end
-        
-        if getgenv().featureStates.ColaEventConnection then
-                getgenv().featureStates.ColaEventConnection:Disconnect()
-                getgenv().featureStates.ColaEventConnection = nil
         end
         
         for _, toggle in pairs(getgenv().featureToggles) do
