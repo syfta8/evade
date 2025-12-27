@@ -425,120 +425,6 @@ PlayerTab:Toggle({
 
 PlayerTab:Divider()
 
-local lastSavedPosition = nil
-local respawnConnection = nil
-local AutoSelfReviveConnection = nil
-local hasRevived = false
-
-local function reviveAtSpawnpoint()
-    if not hasRevived then
-        hasRevived = true
-        task.wait(3)
-        pcall(function()
-            ReplicatedStorage.Events.Player.ChangePlayerMode:FireServer(true)
-        end)
-        task.delay(10, function()
-            hasRevived = false
-        end)
-    end
-end
-
-local function reviveAtPosition(character, hrp)
-    if hrp then
-        lastSavedPosition = hrp.Position
-    end
-    task.wait(3)
-    
-    local startTime = tick()
-    repeat
-        pcall(function()
-            ReplicatedStorage.Events.Player.ChangePlayerMode:FireServer(true)
-        end)
-        task.wait(0.5)
-    until not character:GetAttribute("Downed") or (tick() - startTime > 2)
-    
-    local newCharacter = LocalPlayer.Character
-    local attempts = 0
-    while (not newCharacter or not newCharacter:FindFirstChild("HumanoidRootPart")) and attempts < 20 do
-        newCharacter = LocalPlayer.Character
-        task.wait(0.1)
-        attempts = attempts + 1
-    end
-    
-    local newHRP = newCharacter and newCharacter:FindFirstChild("HumanoidRootPart")
-    if lastSavedPosition and newHRP then
-        newHRP.CFrame = CFrame.new(lastSavedPosition)
-        task.wait(0.1)
-        local movedDistance = (newHRP.Position - lastSavedPosition).Magnitude
-        if movedDistance > 5 then
-            lastSavedPosition = nil
-        end
-    end
-end
-
-PlayerTab:Toggle({
-    Title = "Auto Self Revive",
-    Value = false,
-    Callback = function(state)
-        getgenv().FeatureStates.AutoSelfRevive = state
-        
-        if AutoSelfReviveConnection then
-            AutoSelfReviveConnection:Disconnect()
-            AutoSelfReviveConnection = nil
-        end
-        
-        if respawnConnection then
-            respawnConnection:Disconnect()
-            respawnConnection = nil
-        end
-        
-        if not state then
-            hasRevived = false
-            lastSavedPosition = nil
-            return
-        end
-        
-        local function setupReviveLogic(character)
-            if not character then return end
-            
-            AutoSelfReviveConnection = character:GetAttributeChangedSignal("Downed"):Connect(function()
-                if not getgenv().FeatureStates.AutoSelfRevive then return end
-                
-                local isDowned = character:GetAttribute("Downed")
-                if isDowned then
-                    local hrp = character:FindFirstChild("HumanoidRootPart")
-                    if getgenv().FeatureStates.SelfReviveMethod == "Spawnpoint" then
-                        reviveAtSpawnpoint()
-                    elseif getgenv().FeatureStates.SelfReviveMethod == "Fake Revive" then
-                        reviveAtPosition(character, hrp)
-                    end
-                end
-            end)
-        end
-        
-        local currentChar = LocalPlayer.Character
-        if currentChar then
-            setupReviveLogic(currentChar)
-        end
-        
-        respawnConnection = LocalPlayer.CharacterAdded:Connect(function(newChar)
-            task.wait(1)
-            setupReviveLogic(newChar)
-        end)
-    end
-})
-
-PlayerTab:Dropdown({
-    Title = "Self Revive Method",
-    Values = {"Spawnpoint", "Fake Revive"},
-    Value = "Spawnpoint",
-    Callback = function(value)
-        getgenv().FeatureStates.SelfReviveMethod = value
-    end
-})
-
-PlayerTab:Divider()
-
 local function getMovementTables()
     local requiredFields = {
         "Friction", "AirStrafeAcceleration", "JumpHeight", "RunDeaccel",
@@ -1602,6 +1488,169 @@ AutoTab:Slider({
     end
 })
 
+local lastSavedPosition = nil
+local respawnConnection = nil
+local AutoSelfReviveConnection = nil
+local hasRevived = false
+
+local function reviveAtSpawnpoint()
+    if not hasRevived then
+        hasRevived = true
+        task.wait(3)
+        pcall(function()
+            ReplicatedStorage.Events.Player.ChangePlayerMode:FireServer(true)
+        end)
+        task.delay(10, function()
+            hasRevived = false
+        end)
+    end
+end
+
+local function reviveAtPosition(character, hrp)
+    if hrp then
+        lastSavedPosition = hrp.Position
+    end
+    task.wait(3)
+    
+    local startTime = tick()
+    repeat
+        pcall(function()
+            ReplicatedStorage.Events.Player.ChangePlayerMode:FireServer(true)
+        end)
+        task.wait(0.5)
+    until not character:GetAttribute("Downed") or (tick() - startTime > 2)
+    
+    local newCharacter = LocalPlayer.Character
+    local attempts = 0
+    while (not newCharacter or not newCharacter:FindFirstChild("HumanoidRootPart")) and attempts < 20 do
+        newCharacter = LocalPlayer.Character
+        task.wait(0.1)
+        attempts = attempts + 1
+    end
+    
+    local newHRP = newCharacter and newCharacter:FindFirstChild("HumanoidRootPart")
+    if lastSavedPosition and newHRP then
+        newHRP.CFrame = CFrame.new(lastSavedPosition)
+        task.wait(0.1)
+        local movedDistance = (newHRP.Position - lastSavedPosition).Magnitude
+        if movedDistance > 5 then
+            lastSavedPosition = nil
+        end
+    end
+end
+
+AutoTab:Toggle({
+    Title = "Auto Self Revive",
+    Value = false,
+    Callback = function(state)
+        getgenv().FeatureStates.AutoSelfRevive = state
+        
+        if AutoSelfReviveConnection then
+            AutoSelfReviveConnection:Disconnect()
+            AutoSelfReviveConnection = nil
+        end
+        
+        if respawnConnection then
+            respawnConnection:Disconnect()
+            respawnConnection = nil
+        end
+        
+        if not state then
+            hasRevived = false
+            lastSavedPosition = nil
+            return
+        end
+        
+        local function setupReviveLogic(character)
+            if not character then return end
+            
+            AutoSelfReviveConnection = character:GetAttributeChangedSignal("Downed"):Connect(function()
+                if not getgenv().FeatureStates.AutoSelfRevive then return end
+                
+                local isDowned = character:GetAttribute("Downed")
+                if isDowned then
+                    local hrp = character:FindFirstChild("HumanoidRootPart")
+                    if getgenv().FeatureStates.SelfReviveMethod == "Spawnpoint" then
+                        reviveAtSpawnpoint()
+                    elseif getgenv().FeatureStates.SelfReviveMethod == "Fake Revive" then
+                        reviveAtPosition(character, hrp)
+                    end
+                end
+            end)
+        end
+        
+        local currentChar = LocalPlayer.Character
+        if currentChar then
+            setupReviveLogic(currentChar)
+        end
+        
+        respawnConnection = LocalPlayer.CharacterAdded:Connect(function(newChar)
+            task.wait(1)
+            setupReviveLogic(newChar)
+        end)
+    end
+})
+
+AutoTab:Dropdown({
+    Title = "Self Revive Method",
+    Values = {"Spawnpoint", "Fake Revive"},
+    Value = "Spawnpoint",
+    Callback = function(value)
+        getgenv().FeatureStates.SelfReviveMethod = value
+    end
+})
+
+local function manualRevive()
+    local character = LocalPlayer.Character
+    if not character then return end
+    local hrp = character:FindFirstChild("HumanoidRootPart")
+    local isDowned = character:GetAttribute("Downed")
+    if not isDowned then return end
+    
+    if getgenv().FeatureStates.SelfReviveMethod == "Spawnpoint" then
+        if not hasRevived then
+            hasRevived = true
+            pcall(function()
+                ReplicatedStorage.Events.Player.ChangePlayerMode:FireServer(true)
+            end)
+            task.delay(10, function()
+                hasRevived = false
+            end)
+        end
+    elseif getgenv().FeatureStates.SelfReviveMethod == "Fake Revive" then
+        if hrp then
+            lastSavedPosition = hrp.Position
+        end
+        task.spawn(function()
+            pcall(function()
+                ReplicatedStorage.Events.Player.ChangePlayerMode:FireServer(true)
+            end)
+            
+            local newCharacter
+            local attempts = 0
+            repeat
+                newCharacter = LocalPlayer.Character
+                task.wait(0.1)
+                attempts = attempts + 1
+            until (newCharacter and newCharacter:FindFirstChild("HumanoidRootPart") and newCharacter ~= character) or attempts >= 20
+            
+            if newCharacter then
+                local newHRP = newCharacter:FindFirstChild("HumanoidRootPart")
+                if lastSavedPosition and newHRP then
+                    newHRP.CFrame = CFrame.new(lastSavedPosition)
+                end
+            end
+        end)
+    end
+end
+
+AutoTab:Button({
+    Title = "Manual Revive",
+    Desc = "Manually revive yourself",
+    Icon = "heart",
+    Callback = manualRevive
+})
+
 AutoTab:Divider()
 
 getgenv().AntiAFK = {
@@ -1860,6 +1909,35 @@ AutoTab:Toggle({
 
 FPSTab:Divider()
 
+FPSTab:Toggle({
+    Title = "full bright",
+    Desc = "not mine.",
+    Callback = function()
+        local Lighting = game:GetService("Lighting")
+
+        -- Adjust lighting to be bright
+        Lighting.Ambient = Color3.new(1,1,1)
+        Lighting.OutdoorAmbient = Color3.new(1,1,1)
+        Lighting.Brightness = 3
+        Lighting.ExposureCompensation = 1
+
+        -- Turn off shadows
+        Lighting.GlobalShadows = false
+
+        -- Remove dark effects
+        for _, v in pairs(Lighting:GetChildren()) do
+            if v:IsA("ColorCorrectionEffect")
+            or v:IsA("DepthOfFieldEffect")
+            or v:IsA("BloomEffect")
+            or v:IsA("SunRaysEffect")
+            or v:IsA("Atmosphere")
+            or v:IsA("Sky") then
+                v:Destroy()
+            end
+        end
+    end
+})
+
 FPSTab:Button({
     Title = "Anti lag 1",
     Callback = function()
@@ -2023,7 +2101,7 @@ FPSTab:Button({
     end
 })
 
-FPSTab:Toggle({
+FPSTab:Button({
     Title = "Auto-Optimize New Objects",
     Desc = "Automatically optimize new particles/debris",
     Default = false,
@@ -2661,57 +2739,6 @@ VisualTab:Toggle({
 
 VisualTab:Divider()
 
-local function manualRevive()
-    local character = LocalPlayer.Character
-    if not character then return end
-    local hrp = character:FindFirstChild("HumanoidRootPart")
-    local isDowned = character:GetAttribute("Downed")
-    if not isDowned then return end
-    
-    if getgenv().FeatureStates.SelfReviveMethod == "Spawnpoint" then
-        if not hasRevived then
-            hasRevived = true
-            pcall(function()
-                ReplicatedStorage.Events.Player.ChangePlayerMode:FireServer(true)
-            end)
-            task.delay(10, function()
-                hasRevived = false
-            end)
-        end
-    elseif getgenv().FeatureStates.SelfReviveMethod == "Fake Revive" then
-        if hrp then
-            lastSavedPosition = hrp.Position
-        end
-        task.spawn(function()
-            pcall(function()
-                ReplicatedStorage.Events.Player.ChangePlayerMode:FireServer(true)
-            end)
-            
-            local newCharacter
-            local attempts = 0
-            repeat
-                newCharacter = LocalPlayer.Character
-                task.wait(0.1)
-                attempts = attempts + 1
-            until (newCharacter and newCharacter:FindFirstChild("HumanoidRootPart") and newCharacter ~= character) or attempts >= 20
-            
-            if newCharacter then
-                local newHRP = newCharacter:FindFirstChild("HumanoidRootPart")
-                if lastSavedPosition and newHRP then
-                    newHRP.CFrame = CFrame.new(lastSavedPosition)
-                end
-            end
-        end)
-    end
-end
-
-VisualTab:Button({
-    Title = "Manual Revive",
-    Desc = "Manually revive yourself",
-    Icon = "heart",
-    Callback = manualRevive
-})
-
 VisualTab:Divider()
 
 VisualTab:Input({
@@ -2767,35 +2794,6 @@ VisualTab:Toggle({
 })
 
 VisualTab:Divider()
-
-VisualTab:Toggle({
-    Title = "full bright",
-    Desc = "not mine.",
-    Callback = function()
-        local Lighting = game:GetService("Lighting")
-
-        -- Adjust lighting to be bright
-        Lighting.Ambient = Color3.new(1,1,1)
-        Lighting.OutdoorAmbient = Color3.new(1,1,1)
-        Lighting.Brightness = 3
-        Lighting.ExposureCompensation = 1
-
-        -- Turn off shadows
-        Lighting.GlobalShadows = false
-
-        -- Remove dark effects
-        for _, v in pairs(Lighting:GetChildren()) do
-            if v:IsA("ColorCorrectionEffect")
-            or v:IsA("DepthOfFieldEffect")
-            or v:IsA("BloomEffect")
-            or v:IsA("SunRaysEffect")
-            or v:IsA("Atmosphere")
-            or v:IsA("Sky") then
-                v:Destroy()
-            end
-        end
-    end
-})
 
 getgenv().HeadlessKorblox = {
     Enabled = false,
