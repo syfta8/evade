@@ -173,7 +173,7 @@ local function createFeatureToggle(name, initialState, yPosition, toggleCallback
     local screenGui = Instance.new("ScreenGui")
     screenGui.Name = name .. "ToggleGUI"
     screenGui.ResetOnSpawn = false
-    screenGui.Parent = PlayerGui
+    screenGui.Parent = game:GetService("Players").LocalPlayer:WaitForChild("PlayerGui")
     
     local main = Instance.new("Frame")
     main.Parent = screenGui
@@ -200,42 +200,79 @@ local function createFeatureToggle(name, initialState, yPosition, toggleCallback
     titleLabel.Position = UDim2.fromOffset(5, 5)
     titleLabel.BackgroundTransparency = 1
     titleLabel.Text = name:upper()
-    titleLabel.TextColor3 = Color3.fromRGB(180, 210, 200)
+    titleLabel.TextColor3 = Color3.fromRGB(255, 255, 255) -- Changed to white
     titleLabel.Font = Enum.Font.GothamMedium
     titleLabel.TextSize = 12
     titleLabel.TextXAlignment = Enum.TextXAlignment.Left
     
-    local toggleButton = Instance.new("TextButton")
+    -- Gradient toggle button
+    local toggleButton = Instance.new("Frame")
     toggleButton.Parent = main
     toggleButton.Size = UDim2.new(1, -10, 0.6, -5)
     toggleButton.Position = UDim2.new(0, 5, 0.4, 0)
-    toggleButton.BackgroundColor3 = initialState and Color3.fromRGB(45, 120, 85) or Color3.fromRGB(30, 70, 50)
-    toggleButton.BackgroundTransparency = initialState and 0.3 or 0.35
-    toggleButton.Text = initialState and "ON" or "OFF"
-    toggleButton.TextColor3 = initialState and Color3.fromRGB(215, 245, 230) or Color3.fromRGB(200, 225, 215)
-    toggleButton.Font = Enum.Font.GothamBold
-    toggleButton.TextSize = 13
-    toggleButton.BorderSizePixel = 0
+    toggleButton.BackgroundTransparency = 0.7
+    toggleButton.Draggable = true
+    toggleButton.Active = true
+    toggleButton.Selectable = true
     
-    Instance.new("UICorner", toggleButton).CornerRadius = UDim.new(0, 8)
+    local corner = Instance.new("UICorner")
+    corner.CornerRadius = UDim.new(1, 0)
+    corner.Parent = toggleButton
+    
+    local gradient = Instance.new("UIGradient")
+    gradient.Color = ColorSequence.new{
+        ColorSequenceKeypoint.new(0, initialState and Color3.fromRGB(90, 200, 150) or Color3.fromRGB(180, 180, 180)),
+        ColorSequenceKeypoint.new(1, initialState and Color3.fromRGB(18, 45, 32) or Color3.fromRGB(50, 50, 50))
+    }
+    gradient.Rotation = 45
+    gradient.Parent = toggleButton
+    
+    local toggleStroke = Instance.new("UIStroke")
+    toggleStroke.Color = initialState and Color3.fromRGB(90, 200, 150) or Color3.fromRGB(150, 150, 150)
+    toggleStroke.Thickness = 2
+    toggleStroke.Parent = toggleButton
+    
+    local label = Instance.new("TextLabel")
+    label.Text = initialState and "ON" or "OFF"
+    label.Size = UDim2.new(1, 0, 1, 0)
+    label.BackgroundTransparency = 1
+    label.TextColor3 = Color3.fromRGB(255, 255, 255) -- White text
+    label.TextSize = 13
+    label.Font = Enum.Font.GothamBold
+    label.Parent = toggleButton
+    
+    local clicker = Instance.new("TextButton")
+    clicker.Size = UDim2.new(1, 0, 1, 0)
+    clicker.BackgroundTransparency = 1
+    clicker.Text = ""
+    clicker.ZIndex = 5
+    clicker.Active = false
+    clicker.Selectable = false
+    clicker.Parent = toggleButton
     
     local function updateButton(state)
         if state then
-            toggleButton.Text = "ON"
-            toggleButton.BackgroundColor3 = Color3.fromRGB(45, 120, 85)
-            toggleButton.BackgroundTransparency = 0.3
-            toggleButton.TextColor3 = Color3.fromRGB(215, 245, 230)
+            -- ON state: Green gradient
+            gradient.Color = ColorSequence.new{
+                ColorSequenceKeypoint.new(0, Color3.fromRGB(90, 200, 150)),
+                ColorSequenceKeypoint.new(1, Color3.fromRGB(18, 45, 32))
+            }
+            toggleStroke.Color = Color3.fromRGB(90, 200, 150)
+            label.Text = "ON"
             stroke.Color = Color3.fromRGB(90, 200, 150)
         else
-            toggleButton.Text = "OFF"
-            toggleButton.BackgroundColor3 = Color3.fromRGB(30, 70, 50)
-            toggleButton.BackgroundTransparency = 0.35
-            toggleButton.TextColor3 = Color3.fromRGB(200, 225, 215)
+            -- OFF state: White/gray gradient
+            gradient.Color = ColorSequence.new{
+                ColorSequenceKeypoint.new(0, Color3.fromRGB(180, 180, 180)),
+                ColorSequenceKeypoint.new(1, Color3.fromRGB(50, 50, 50))
+            }
+            toggleStroke.Color = Color3.fromRGB(150, 150, 150)
+            label.Text = "OFF"
             stroke.Color = Color3.fromRGB(70, 150, 110)
         end
     end
     
-    toggleButton.MouseButton1Click:Connect(function()
+    clicker.MouseButton1Click:Connect(function()
         local newState = not initialState
         initialState = newState
         updateButton(newState)
@@ -243,6 +280,14 @@ local function createFeatureToggle(name, initialState, yPosition, toggleCallback
         if toggleCallback then
             toggleCallback(newState)
         end
+    end)
+    
+    clicker.MouseEnter:Connect(function()
+        toggleStroke.Color = initialState and Color3.fromRGB(120, 230, 180) or Color3.fromRGB(200, 200, 200)
+    end)
+    
+    clicker.MouseLeave:Connect(function()
+        toggleStroke.Color = initialState and Color3.fromRGB(90, 200, 150) or Color3.fromRGB(150, 150, 150)
     end)
     
     getgenv().featureToggles[name] = {
