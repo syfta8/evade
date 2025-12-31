@@ -1,226 +1,1166 @@
-local Fluent = loadstring(game:HttpGet("https://github.com/dawid-scripts/Fluent/releases/latest/download/main.lua"))()
-local SaveManager = loadstring(game:HttpGet("https://raw.githubusercontent.com/dawid-scripts/Fluent/master/Addons/SaveManager.lua"))()
-local InterfaceManager = loadstring(game:HttpGet("https://raw.githubusercontent.com/dawid-scripts/Fluent/master/Addons/InterfaceManager.lua"))()
-
-local Window = Fluent:CreateWindow({
-    Title = "Slavan Hub",
-    SubTitle = "by NotAka",
-    TabWidth = 160,
-    Size = UDim2.fromOffset(500, 400),
-    Acrylic = true,
-    Theme = "Dark",
-    MinimizeKey = Enum.KeyCode.LeftControl
-})
-
-local Tabs = {
-    Main = Window:AddTab({ Title = "Main", Icon = "swords" }),
-    Settings = Window:AddTab({ Title = "Settings", Icon = "settings" })
+if game.GameId ~= 7671049560 then
+  game:GetService("StarterGui"):SetCore("SendNotification", {
+    Title = "Wrong Game!",
+    Text = "This script only works in The Forge",
+    Duration = 5,
+  })
+  return 
+end
+repeat
+  task.wait()
+until game:IsLoaded()
+if setfpscap then
+  setfpscap(1000000)
+end
+local r1_0 = loadstring(game:HttpGet("https://github.com/Footagesus/WindUI/releases/latest/download/main.lua"))()
+local r2_0 = game:GetService("Players")
+local r3_0 = game:GetService("ReplicatedStorage")
+local r4_0 = game:GetService("UserInputService")
+local r5_0 = game:GetService("TeleportService")
+local r6_0 = game:GetService("NetworkClient")
+local r7_0 = game:GetService("VirtualUser")
+local r8_0 = game:GetService("RunService")
+local r9_0 = game:GetService("Workspace")
+local r10_0 = game:GetService("HttpService")
+local r11_0 = r2_0.LocalPlayer
+local r12_0 = "MZXNHubForge"
+local r13_0 = r12_0 .. "/Forge_SystemSettings.json"
+local r14_0 = r3_0:WaitForChild("Shared"):WaitForChild("Packages"):WaitForChild("Knit"):WaitForChild("Services")
+local function r15_0(r0_42, r1_42, r2_42)
+  -- line: [0, 0] id: 42
+  local r3_42, r4_42 = pcall(function()
+    -- line: [0, 0] id: 43
+    return r14_0:WaitForChild(r0_42):WaitForChild("RF"):WaitForChild(r2_42)
+  end)
+  local r5_42 = nil	-- notice: implicit variable refs by block#[3]
+  if r3_42 then
+    r5_42 = r4_42
+    if r5_42 then
+      ::label_10::
+      r5_42 = nil
+    end
+  else
+    goto label_10	-- block#2 is visited secondly
+  end
+  return r5_42
+end
+local r16_0 = {
+  RedeemCode = r15_0("CodeService", "RF", "RedeemCode"),
+  ToolActivated = r15_0("ToolService", "RF", "ToolActivated"),
+  StartBlock = r15_0("ToolService", "RF", "StartBlock"),
+  StopBlock = r15_0("ToolService", "RF", "StopBlock"),
+  Run = r15_0("CharacterService", "RF", "Run"),
+  ChangeSequence = r15_0("ForgeService", "RF", "ChangeSequence"),
+  StartForge = r15_0("ForgeService", "RF", "StartForge"),
+  Forge = r15_0("ProximityService", "RF", "Forge"),
 }
-
-local Options = Fluent.Options
-
-local RunService = game:GetService("RunService")
-local Players = game:GetService("Players")
-local UserInputService = game:GetService("UserInputService")
-local VirtualInputManager = game:GetService("VirtualInputManager")
-local Player = Players.LocalPlayer
-
-local autoParryEnabled = false
-local parryConnSim, parryConnChild
-local autoSpamEnabled = false
-local spamConn
-local ballData = {}
-local MousePosition = Vector2.new(0, 0)
-
-local function GetBalls()
-    local balls = {}
-    for _, b in ipairs(workspace.Balls:GetChildren()) do
-        if b:GetAttribute("realBall") then
-            table.insert(balls, b)
+local r17_0 = {
+  AutoMine = false,
+  MineTarget = "Pebble",
+  AutoAttack = false,
+  AttackTargets = {},
+  AutoParry = false,
+  AutoRun = false,
+  InfiniteFly = false,
+  ClickTeleport = false,
+  ForgeItemType = "Weapon",
+  theme = "Dark",
+  antiAFKEnabled = false,
+  autoReconnectEnabled = false,
+}
+local r18_0 = {
+  autoLoadConfig = "None",
+  autoLoadEnabled = false,
+}
+local r19_0 = table.clone(r17_0)
+local r20_0 = table.clone(r18_0)
+local r21_0 = {
+  Mining = nil,
+  Combat = nil,
+}
+local r22_0 = false
+local r23_0 = false
+local r24_0 = nil
+local r25_0 = nil
+local r26_0 = nil
+local r27_0 = 0
+local r28_0 = nil
+local r29_0 = nil
+local r30_0 = nil
+local function r31_0()
+  -- line: [0, 0] id: 35
+  pcall(function()
+    -- line: [0, 0] id: 37
+    local r0_37 = game:GetService("CoreGui"):WaitForChild("RobloxPromptGui", 10)
+    if r0_37 then
+      r0_37.DescendantAdded:Connect(function(r0_38)
+        -- line: [0, 0] id: 38
+        if r0_38.Name == "ErrorPrompt" and r19_0.autoReconnectEnabled then
+          r27_0 = r27_0 + 1
+          if r27_0 <= 30 then
+            task.wait(6)
+            r5_0:Teleport(game.PlaceId, r11_0)
+          end
         end
+      end)
     end
-    return balls
+  end)
+  r6_0.ChildRemoved:Connect(function()
+    -- line: [0, 0] id: 36
+    if r19_0.autoReconnectEnabled then
+      task.wait(6)
+      r5_0:Teleport(game.PlaceId, r11_0)
+    end
+  end)
 end
-
-local function ResetParry()
-    if parryConnSim then parryConnSim:Disconnect() parryConnSim = nil end
-    if parryConnChild then parryConnChild:Disconnect() parryConnChild = nil end
-    for _, data in pairs(ballData) do
-        if data.parryConnAttr then data.parryConnAttr:Disconnect() end
+local function r32_0()
+  -- line: [0, 0] id: 56
+  r11_0.Idled:Connect(function()
+    -- line: [0, 0] id: 57
+    if r19_0.antiAFKEnabled then
+      r7_0:CaptureController()
+      r7_0:ClickButton2(Vector2.new())
     end
-    ballData = {}
+  end)
 end
-
-local function bindParryAttr(ball)
-    if not ballData[ball] then
-        ballData[ball] = {
-            IsParried = false,
-            Cooldown = 0,
-            lastVel = Vector3.new(0,0,0),
-            lastPos = Vector3.new(0,0,0),
-            lastAccel = Vector3.new(0,0,0),
-            parryConnAttr = nil
-        }
+local function r33_0()
+  -- line: [0, 0] id: 27
+  local r0_27 = {
+    "None"
+  }
+  pcall(function()
+    -- line: [0, 0] id: 28
+    if isfolder(r12_0) then
+      for r3_28, r4_28 in pairs(listfiles(r12_0)) do
+        if r4_28:match("%.json$") and not r4_28:match("SystemSettings") then
+          table.insert(r0_27, r4_28:match(r12_0 .. "/(.+)%.json$") or r4_28:match("([^/\\]+)%.json$"))
+        end
+      end
     end
-    if ballData[ball].parryConnAttr then
-        ballData[ball].parryConnAttr:Disconnect()
-    end
-    ballData[ball].parryConnAttr = ball:GetAttributeChangedSignal("target"):Connect(function()
-        ballData[ball].IsParried = false
-        ballData[ball].Cooldown = 0
-        ballData[ball].lastVel = Vector3.new(0,0,0)
-        ballData[ball].lastPos = Vector3.new(0,0,0)
-        ballData[ball].lastAccel = Vector3.new(0,0,0)
+  end)
+  return r0_27
+end
+local function r34_0()
+  -- line: [0, 0] id: 17
+  if not isfolder(r12_0) then
+    makefolder(r12_0)
+  end
+  writefile(r13_0, r10_0:JSONEncode(r20_0))
+end
+local function r35_0(r0_5)
+  -- line: [0, 0] id: 5
+  if not isfolder(r12_0) then
+    makefolder(r12_0)
+  end
+  r19_0.theme = r1_0:GetCurrentTheme()
+  writefile(r12_0 .. "/" .. r0_5 .. ".json", r10_0:JSONEncode(r19_0))
+  r1_0:Notify({
+    Title = "Saved",
+    Content = r0_5,
+    Duration = 2,
+  })
+  if r30_0 and r30_0.Refresh then
+    r30_0:Refresh(r33_0())
+  end
+end
+local function r36_0(r0_24)
+  -- line: [0, 0] id: 24
+  if not r0_24 or r0_24 == "None" then
+    return 
+  end
+  local r1_24 = r12_0 .. "/" .. r0_24 .. ".json"
+  if isfile(r1_24) then
+    local r2_24, r3_24 = pcall(function()
+      -- line: [0, 0] id: 25
+      return r10_0:JSONDecode(readfile(r1_24))
     end)
-end
-
-local function setupParry()
-    ResetParry()
-    for _, ball in ipairs(GetBalls()) do
-        bindParryAttr(ball)
+    if r2_24 and r3_24 then
+      r19_0 = r3_24
+      if r19_0.antiAFKEnabled then
+        r32_0()
+      end
+      if r19_0.autoReconnectEnabled then
+        r31_0()
+      end
+      r1_0:SetTheme(r19_0.theme or "Dark")
+      r1_0:Notify({
+        Title = "Loaded",
+        Content = r0_24,
+        Duration = 2,
+      })
+      if r28_0 and r28_0.Set then
+        r28_0:Set(r19_0.MineTarget)
+      end
+      if r29_0 and r29_0.Set then
+        r29_0:Set(r19_0.AttackTargets)
+      end
+      return true
     end
-    parryConnChild = workspace.Balls.ChildAdded:Connect(function(child)
-        if not autoParryEnabled then return end
-        if child:GetAttribute("realBall") then
-            bindParryAttr(child)
-        end
-    end)
-    parryConnSim = RunService.Heartbeat:Connect(function(delta)
-        if not autoParryEnabled then return end
-        local hrp = Player.Character and Player.Character:FindFirstChild("HumanoidRootPart")
-        if not hrp then return end
-
-        local ballsToParry = {}
-
-        for _, ball in ipairs(GetBalls()) do
-            if not ballData[ball] then
-                bindParryAttr(ball)
-            end
-            local data = ballData[ball]
-            if ball.Anchored or not ball:FindFirstChild("zoomies") then
-                continue
-            end
-
-            local pos = ball.Position
-            local vel = ball.zoomies.VectorVelocity
-            local speed = vel.Magnitude
-            if speed < 0.5 then
-                continue
-            end
-
-            local accel = (vel - data.lastVel) / delta
-            local velUnit = vel.Unit
-            local tangentialAccel = accel:Dot(velUnit)
-            local normalAccel = accel - tangentialAccel * velUnit
-            local normalAccelMag = normalAccel.Magnitude
-            local curvatureMeasure = normalAccelMag / speed
-            local t = math.clamp(curvatureMeasure / 10, 0, 1)
-            local baseThreshold = 0.45 - 0.1 * t
-
-            data.lastVel = vel
-            data.lastPos = pos
-
-            local pingOffset = Player:GetNetworkPing() * 1000
-            local pingFactor = math.clamp(pingOffset / 1000, 0, 0.15)
-            local dynamicThreshold = baseThreshold + pingFactor * 0.15
-            dynamicThreshold = dynamicThreshold * (1 - math.clamp(speed / 350, 0, 0.3))
-
-            local toTarget = hrp.Position - pos
-            local forwardDir = velUnit
-            local forwardDist = toTarget:Dot(forwardDir)
-            local timeToHit = forwardDist / speed
-
-            local predictedPos = pos + vel * timeToHit + 0.5 * accel * timeToHit * timeToHit
-            local distToPredicted = (hrp.Position - predictedPos).Magnitude
-
-            if distToPredicted > 30 then
-                continue
-            end
-
-            if ball:GetAttribute("target") == Player.Name and not data.IsParried and timeToHit >= 0.1 and timeToHit <= dynamicThreshold then
-                table.insert(ballsToParry, { Ball = ball, Data = data })
-            end
-        end
-
-        if #ballsToParry > 0 then
-            local screenPos = Vector2.new(MousePosition.X, MousePosition.Y)
-            for i = 1, #ballsToParry do
-                VirtualInputManager:SendMouseButtonEvent(screenPos.X, screenPos.Y, 0, true, game, 0)
-                VirtualInputManager:SendMouseButtonEvent(screenPos.X, screenPos.Y, 0, false, game, 0)
-            end
-            for _, parryInfo in ipairs(ballsToParry) do
-                local data = parryInfo.Data
-                data.IsParried = true
-                data.Cooldown = tick()
-            end
-        end
-
-        for _, ball in ipairs(GetBalls()) do
-            local data = ballData[ball]
-            if data and tick() - data.Cooldown >= 0.5 then
-                data.IsParried = false
-            end
-        end
-    end)
+  end
+  return false
 end
-
-local function setupSpam()
-    if spamConn then spamConn:Disconnect() spamConn = nil end
-    local lastClickTime = 0
-    local clickCooldown = 0.05
-    spamConn = RunService.Heartbeat:Connect(function()
-        if not autoSpamEnabled then return end
-        if tick() - lastClickTime >= clickCooldown then
-            VirtualInputManager:SendMouseButtonEvent(MousePosition.X, MousePosition.Y, 0, true, game, 0)
-            VirtualInputManager:SendMouseButtonEvent(MousePosition.X, MousePosition.Y, 0, false, game, 0)
-            lastClickTime = tick()
-        end
-    end)
+if isfile(r13_0) then
+  local r37_0, r38_0 = pcall(function()
+    -- line: [0, 0] id: 40
+    return r10_0:JSONDecode(readfile(r13_0))
+  end)
+  if r37_0 and r38_0 then
+    r20_0 = r38_0
+  end
 end
-
-UserInputService.InputChanged:Connect(function(i)
-    if i.UserInputType == Enum.UserInputType.MouseMovement then
-        MousePosition = i.Position
+if r20_0.autoLoadEnabled then
+  r36_0(r20_0.autoLoadConfig)
+end
+local function r37_0()
+  -- line: [0, 0] id: 7
+  local r0_7 = "Unknown"
+  local r1_7 = "Unknown"
+  local r2_7 = r11_0:FindFirstChild("PlayerGui")
+  if r2_7 then
+    local r3_7 = r2_7:FindFirstChild("Main") and r2_7.Main:FindFirstChild("Screen") and r2_7.Main.Screen:FindFirstChild("Hud")
+    if r3_7 then
+      if r3_7:FindFirstChild("Level") then
+        r0_7 = r3_7.Level.Text
+      end
+      if r3_7:FindFirstChild("Gold") then
+        r1_7 = r3_7.Gold.Text
+      end
     end
-end)
-
-local sect = Tabs.Main:AddSection("Auto Controls")
-Tabs.Main:AddToggle("AutoParry", { Title = "Auto Parry", Default = false }):OnChanged(function()
-    autoParryEnabled = Options.AutoParry.Value
-    if autoParryEnabled then
-        setupParry()
-        Fluent:Notify({ Title = "Slavan Hub", Content = "Auto Parry Enabled", Duration = 2 })
-    else
-        ResetParry()
+  end
+  return r0_7, r1_7
+end
+local function r38_0()
+  -- line: [0, 0] id: 60
+  local r0_60 = {
+    Iron = 0,
+    Copper = 0,
+    Gold = 0,
+  }
+  local r1_60 = r11_0:FindFirstChild("PlayerGui")
+  if not r1_60 then
+    return r0_60
+  end
+  local r2_60 = r1_60:FindFirstChild("Forge") and r1_60.Forge:FindFirstChild("OreSelect") and r1_60.Forge.OreSelect:FindFirstChild("OresFrame")
+  if r2_60 and r2_60:FindFirstChild("Frame") and r2_60.Frame:FindFirstChild("Background") then
+    for r6_60, r7_60 in ipairs(r2_60.Frame.Background:GetChildren()) do
+      local r8_60 = r7_60:FindFirstChild("Main")
+      if r8_60 then
+        local r9_60 = r8_60:FindFirstChild("Quantity")
+        local r10_60 = r9_60 and tonumber(r9_60.Text:match("%d+"))
+        if r10_60 and r7_60.Name then
+          r0_60[r7_60.Name] = r10_60
+        end
+      end
     end
-end)
-
-Tabs.Main:AddKeybind("AutoSpamBind", {
-    Title = "Auto Spam Toggle",
-    Description = "Toggles auto spam on/off",
-    Mode = "Toggle",
-    Default = "E",
-    Callback = function(Value)
-        autoSpamEnabled = Value
-        if autoSpamEnabled then
-            setupSpam()
-            Fluent:Notify({ Title = "Slavan Hub", Content = "Auto Spam Enabled", Duration = 2 })
+    return r0_60
+  end
+  local r3_60 = r1_60:FindFirstChild("Menu") and r1_60.Menu:FindFirstChild("Frame") and r1_60.Menu.Frame:FindFirstChild("Frame") and r1_60.Menu.Frame.Frame:FindFirstChild("Menus") and r1_60.Menu.Frame.Frame.Menus:FindFirstChild("Stash") and r1_60.Menu.Frame.Frame.Menus.Stash:FindFirstChild("Background")
+  if r3_60 then
+    for r7_60, r8_60 in ipairs(r3_60:GetChildren()) do
+      local r9_60 = r8_60:FindFirstChild("Main")
+      if r9_60 then
+        local r10_60 = r9_60:FindFirstChild("ItemName") and r9_60.ItemName.Text:gsub(" Ore", "")
+        local r11_60 = r9_60:FindFirstChild("Quantity")
+        if r11_60 then
+          r11_60 = tonumber(r9_60.Quantity.Text:match("%d+")) or 0
         else
-            if spamConn then spamConn:Disconnect() spamConn = nil end
-            Fluent:Notify({ Title = "Slavan Hub", Content = "Auto Spam Disabled", Duration = 2 })
+          goto label_153	-- block#30 is visited secondly
         end
+        if r10_60 and r0_60[r10_60] ~= nil then
+          r0_60[r10_60] = r11_60
+        end
+      end
     end
+  end
+  return r0_60
+end
+local function r39_0()
+  -- line: [0, 0] id: 14
+  if not r16_0.RedeemCode then
+    return 
+  end
+  for r4_14, r5_14 in ipairs({
+    "40KLIKES",
+    "20KLIKES",
+    "15KLIKES",
+    "10KLIKES",
+    "5KLIKES",
+    "BETARELEASE!",
+    "POSTRELEASEQNA"
+  }) do
+    task.spawn(function()
+      -- line: [0, 0] id: 15
+      r16_0.RedeemCode:InvokeServer(r5_14)
+    end)
+    task.wait(0.2)
+    -- close: r4_14
+  end
+  r1_0:Notify({
+    Title = "Codes",
+    Content = "Redeeming codes...",
+    Duration = 3,
+  })
+end
+local function r40_0()
+  -- line: [0, 0] id: 23
+  local r0_23 = {}
+  local r1_23 = {}
+  local r2_23 = r9_0:FindFirstChild("Rocks")
+  if r2_23 then
+    for r6_23, r7_23 in ipairs(r2_23:GetChildren()) do
+      for r11_23, r12_23 in ipairs(r7_23:GetChildren()) do
+        if r12_23.Name == "SpawnLocation" then
+          for r16_23, r17_23 in ipairs(r12_23:GetChildren()) do
+            if r17_23:IsA("Model") and r17_23:FindFirstChild("Hitbox") and not r1_23[r17_23.Name] then
+              r1_23[r17_23.Name] = true
+              table.insert(r0_23, r17_23.Name)
+            end
+          end
+        elseif r12_23:IsA("Model") and r12_23:FindFirstChild("Hitbox") and not r1_23[r12_23.Name] then
+          r1_23[r12_23.Name] = true
+          table.insert(r0_23, r12_23.Name)
+        end
+      end
+    end
+  end
+  table.sort(r0_23)
+  return r0_23
+end
+local function r41_0()
+  -- line: [0, 0] id: 58
+  local r0_58 = {}
+  local r1_58 = {}
+  local r2_58 = r9_0:FindFirstChild("Living")
+  if r2_58 then
+    for r6_58, r7_58 in ipairs(r2_58:GetChildren()) do
+      if r7_58:IsA("Model") and r7_58:FindFirstChild("Humanoid") and not r7_58:FindFirstChild("RaceFolder") and not r7_58:FindFirstChild("Animate") then
+        local r8_58 = r7_58.Name:gsub("%d+$", "")
+        if not r1_58[r8_58] then
+          r1_58[r8_58] = true
+          table.insert(r0_58, r8_58)
+        end
+      end
+    end
+  end
+  table.sort(r0_58)
+  return r0_58
+end
+local function r42_0()
+  -- line: [0, 0] id: 11
+  local r0_11 = {}
+  local r1_11 = r9_0:FindFirstChild("Proximity")
+  if r1_11 then
+    for r5_11, r6_11 in ipairs(r1_11:GetChildren()) do
+      if r6_11:IsA("Model") or r6_11:IsA("BasePart") then
+        table.insert(r0_11, r6_11)
+      end
+    end
+  end
+  table.sort(r0_11, function(r0_12, r1_12)
+    -- line: [0, 0] id: 12
+    return r0_12.Name < r1_12.Name
+  end)
+  return r0_11
+end
+local function r43_0(r0_66)
+  -- line: [0, 0] id: 66
+  local r1_66 = r11_0.Character
+  if not r1_66 or not r1_66:FindFirstChild("HumanoidRootPart") then
+    return nil
+  end
+  local r2_66 = r1_66.HumanoidRootPart
+  local r3_66 = nil
+  local r4_66 = r0_66 or 500
+  local r5_66 = r9_0:FindFirstChild("Rocks")
+  if not r5_66 then
+    return nil
+  end
+  for r9_66, r10_66 in ipairs(r5_66:GetDescendants()) do
+    if r10_66.Name == "Hitbox" and r10_66:IsA("BasePart") and r10_66.Parent and r10_66.Parent.Name == r19_0.MineTarget then
+      local r11_66 = r10_66.Parent:FindFirstChild("infoFrame")
+      local r12_66 = r11_66 and r11_66.Frame.rockHP.Text
+      if r12_66 then
+        if (tonumber(r12_66:match("%d+")) or 0) > 0 then
+          ::label_67::
+          local r13_66 = (r10_66.Position - r2_66.Position).Magnitude
+          if r13_66 < r4_66 then
+            r3_66 = r10_66
+            r4_66 = r13_66
+          end
+        end
+      else
+        goto label_67	-- block#18 is visited secondly
+      end
+    end
+  end
+  return r3_66
+end
+local function r44_0(r0_62, r1_62)
+  -- line: [0, 0] id: 62
+  local r2_62 = 0
+  for r6_62, r7_62 in pairs(r0_62) do
+    r2_62 = r2_62 + r7_62
+  end
+  if r2_62 < 3 then
+    r1_0:Notify({
+      Title = "Error",
+      Content = "Select at least 3 ores!",
+      Duration = 3,
+    })
+    return 
+  end
+  local r3_62 = r9_0:FindFirstChild("Proximity") and r9_0.Proximity:FindFirstChild("Forge")
+  if r3_62 then
+    r1_0:Notify({
+      Title = "Forge",
+      Content = "Starting... DO NOT CLOSE",
+      Duration = 3,
+    })
+    r16_0.Forge:InvokeServer(r3_62)
+    task.wait()
+    r16_0.StartForge:InvokeServer(r3_62)
+    task.wait(0.1)
+    r16_0.ChangeSequence:InvokeServer("Melt", {
+      FastForge = false,
+      ItemType = r1_62,
+      Ores = r0_62,
+    })
+    task.wait(1)
+    r16_0.ChangeSequence:InvokeServer("Pour", {
+      ClientTime = r9_0:GetServerTimeNow(),
+    })
+    task.wait(1)
+    r16_0.ChangeSequence:InvokeServer("Hammer", {
+      ClientTime = r9_0:GetServerTimeNow(),
+    })
+    task.wait(1)
+    task.spawn(function()
+      -- line: [0, 0] id: 63
+      r16_0.ChangeSequence:InvokeServer("Water", {
+        ClientTime = r9_0:GetServerTimeNow(),
+      })
+    end)
+    task.wait(1)
+    r16_0.ChangeSequence:InvokeServer("Showcase", {})
+    r1_0:Notify({
+      Title = "Forge",
+      Content = "Completed!",
+      Duration = 3,
+    })
+  end
+end
+local function r45_0()
+  -- line: [0, 0] id: 20
+  local r0_20 = r11_0.Character
+  local r1_20 = r11_0.Character and r11_0.Character:FindFirstChild("Humanoid")
+  local r2_20 = r0_20 and r0_20:FindFirstChild("HumanoidRootPart")
+  if not r2_20 or not r1_20 then
+    return 
+  end
+  r23_0 = true
+  r1_20.PlatformStand = true
+  r24_0 = Instance.new("BodyGyro", r2_20)
+  r24_0.P = 90000
+  r24_0.maxTorque = Vector3.new(9000000000, 9000000000, 9000000000)
+  r24_0.cframe = r2_20.CFrame
+  r25_0 = Instance.new("BodyVelocity", r2_20)
+  r25_0.velocity = Vector3.zero
+  r25_0.maxForce = Vector3.new(9000000000, 9000000000, 9000000000)
+  task.spawn(function()
+    -- line: [0, 0] id: 21
+    while r23_0 do
+      local r0_21 = r9_0.CurrentCamera
+      if r0_21 then
+        local r1_21 = Vector3.zero
+        if r4_0:IsKeyDown(Enum.KeyCode.W) then
+          r1_21 = r1_21 + r0_21.CFrame.LookVector
+        end
+        if r4_0:IsKeyDown(Enum.KeyCode.S) then
+          r1_21 = r1_21 - r0_21.CFrame.LookVector
+        end
+        if r4_0:IsKeyDown(Enum.KeyCode.A) then
+          r1_21 = r1_21 - r0_21.CFrame.RightVector
+        end
+        if r4_0:IsKeyDown(Enum.KeyCode.D) then
+          r1_21 = r1_21 + r0_21.CFrame.RightVector
+        end
+        if r1_21.Magnitude > 0 then
+          r25_0.velocity = r1_21.Unit * 50
+        else
+          r25_0.velocity = Vector3.zero
+        end
+        r24_0.cframe = r0_21.CFrame
+      end
+      r8_0.RenderStepped:Wait()
+    end
+  end)
+end
+local function r46_0()
+  -- line: [0, 0] id: 18
+  r23_0 = false
+  if r24_0 then
+    r24_0:Destroy()
+  end
+  if r25_0 then
+    r25_0:Destroy()
+  end
+  if r11_0.Character and r11_0.Character:FindFirstChild("Humanoid") then
+    r11_0.Character.Humanoid.PlatformStand = false
+  end
+end
+r11_0.CharacterAdded:Connect(function()
+  -- line: [0, 0] id: 55
+  if r23_0 then
+    r46_0()
+  end
+end)
+r1_0:SetTheme(r19_0.theme)
+r26_0 = r1_0:CreateWindow({
+  Title = "MZXN Hub - The Forge",
+  Icon = "hammer",
+  Author = "@mzxn_xd",
+  Folder = r12_0,
+  Size = UDim2.fromOffset(620, 520),
+  Theme = r19_0.theme,
+  SideBarWidth = 180,
+  Transparent = true,
 })
-
-SaveManager:SetLibrary(Fluent)
-InterfaceManager:SetLibrary(Fluent)
-SaveManager:IgnoreThemeSettings()
-SaveManager:SetIgnoreIndexes({})
-InterfaceManager:SetFolder("SlavanHub")
-SaveManager:SetFolder("SlavanHub/BladeBall")
-InterfaceManager:BuildInterfaceSection(Tabs.Settings)
-SaveManager:BuildConfigSection(Tabs.Settings)
-
-Window:SelectTab(1)
-Fluent:Notify({ Title = "Slavan Hub", Content = "Script Loaded", Duration = 3 })
-SaveManager:LoadAutoloadConfig()
+local r47_0 = r26_0:Tab({
+  Title = "Information",
+  Icon = "info",
+})
+local r48_0 = r26_0:Tab({
+  Title = "Farming",
+  Icon = "pickaxe",
+})
+local r49_0 = r26_0:Tab({
+  Title = "Combat",
+  Icon = "sword",
+})
+local r50_0 = r26_0:Tab({
+  Title = "Forge",
+  Icon = "flame",
+})
+local r51_0 = r26_0:Tab({
+  Title = "Teleport",
+  Icon = "map-pin",
+})
+local r52_0 = r26_0:Tab({
+  Title = "Settings",
+  Icon = "settings",
+})
+r26_0:SelectTab(1)
+r47_0:Section({
+  Title = "User Profile",
+  Icon = "user",
+})
+local r53_0, r54_0 = r37_0()
+r47_0:Paragraph({
+  Title = "Welcome, " .. r11_0.Name .. "!",
+  Desc = "Stats: Level " .. r53_0 .. " | Gold: " .. r54_0,
+})
+r47_0:Paragraph({
+  Title = "Account Information",
+  Desc = "Username: @" .. r11_0.Name .. " | ID: " .. r11_0.UserId .. " | Age: " .. r11_0.AccountAge .. " days",
+})
+r47_0:Divider()
+r47_0:Paragraph({
+  Title = "MZXN Hub - The Forge Edition",
+  Desc = "âœ¨ COMPLETE FEATURES âœ¨\r\n\r\nFEATURES:\r\nâ€¢ Auto Mine & Combat (Instant TP)\r\nâ€¢ Instant Forge System\r\nâ€¢ Infinite Fly & Teleports\r\nâ€¢ Anti-AFK & Auto-Reconnect\r\nâ€¢ Save/Load Configs\r\n\r\nCONTROLS:\r\nâ€¢ G = Show/Hide Menu\r\nâ€¢ Ctrl + Click = Teleport\r\nâ€¢ WASD = Fly Control\r\n\r\nCrcked by Project X â¤ï¸",
+})
+r47_0:Divider()
+r47_0:Button({
+  Title = "Join Discord Server",
+  Icon = "message-circle",
+  Variant = "Primary",
+  Callback = function()
+    -- line: [0, 0] id: 1
+    local r0_1 = "dFqH5jtpqt"
+    if setclipboard then
+      setclipboard("https://discord.gg/" .. r0_1)
+    end
+    local r2_1 = (function()
+      -- line: [0, 0] id: 4
+      local r0_4 = syn
+      if r0_4 then
+        r0_4 = syn.request
+        if not r0_4 then
+          ::label_7::
+          r0_4 = http
+          if r0_4 then
+            r0_4 = http.request
+            if not r0_4 then
+              ::label_14::
+              r0_4 = http_request
+              if not r0_4 then
+                r0_4 = fluxus
+                if r0_4 then
+                  r0_4 = fluxus.request or request
+                else
+                  goto label_24	-- block#7 is visited secondly
+                end
+              end
+            end
+          else
+            goto label_14	-- block#4 is visited secondly
+          end
+        end
+      else
+        goto label_7	-- block#2 is visited secondly
+      end
+      return r0_4
+    end)()
+    if not r2_1 then
+      r1_0:Notify({
+        Title = "Link Copied!",
+        Content = "Discord link copied to clipboard",
+        Duration = 3,
+      })
+      return 
+    end
+    local function r3_1(r0_2)
+      -- line: [0, 0] id: 2
+      local r1_2 = "http://127.0.0.1:" .. tostring(r0_2) .. "/rpc?v=1"
+      local r2_2 = {
+        cmd = "INVITE_BROWSER",
+        args = {
+          code = r0_1,
+        },
+        nonce = r10_0:GenerateGUID(false),
+      }
+      local r3_2, r4_2 = pcall(function()
+        -- line: [0, 0] id: 3
+        return r2_1({
+          Url = r1_2,
+          Method = "POST",
+          Headers = {
+            ["Content-Type"] = "application/json",
+            Origin = "https://discord.com",
+          },
+          Body = r10_0:JSONEncode(r2_2),
+        })
+      end)
+      if r3_2 and r4_2 and (r4_2.StatusCode == 200 or r4_2.Status == 200) then
+        return true
+      end
+      return false
+    end
+    local r4_1 = false
+    for r8_1 = 6463, 6472, 1 do
+      if r3_1(r8_1) then
+        r4_1 = true
+        r1_0:Notify({
+          Title = "Discord Opened!",
+          Content = "Join request sent successfully",
+          Duration = 3,
+        })
+        break
+      end
+    end
+    if not r4_1 then
+      r1_0:Notify({
+        Title = "Link Copied!",
+        Content = "Discord not found. Link copied to clipboard",
+        Duration = 4,
+      })
+    end
+  end,
+})
+r48_0:Section({
+  Title = "Mining",
+  Icon = "pickaxe",
+})
+local r55_0 = r40_0()
+local r58_0 = {
+  Title = "Select Rock",
+}
+local r59_0 = #r55_0
+if r59_0 > 0 then
+  r59_0 = r55_0
+  if r59_0 then
+    ::label_391::
+    r59_0 = {}
+    local r60_0 = "Pebble"
+    -- setlist for #59 failed
+  end
+else
+  goto label_391	-- block#13 is visited secondly
+end
+r58_0.Values = r59_0
+r58_0.Value = r19_0.MineTarget
+r58_0.SearchBarEnabled = true
+function r58_0.Callback(r0_54)
+  -- line: [0, 0] id: 54
+  r19_0.MineTarget = r0_54
+end
+r28_0 = r48_0:Dropdown(r58_0)
+r48_0:Button({
+  Title = "Refresh List",
+  Icon = "refresh-cw",
+  Callback = function()
+    -- line: [0, 0] id: 51
+    if r28_0.Refresh then
+      r28_0:Refresh(r40_0())
+    end
+  end,
+})
+r48_0:Toggle({
+  Title = "Auto Mine (TP)",
+  Value = r19_0.AutoMine,
+  Callback = function(r0_31)
+    -- line: [0, 0] id: 31
+    r19_0.AutoMine = r0_31
+  end,
+})
+r48_0:Section({
+  Title = "Movement",
+  Icon = "wind",
+})
+r48_0:Toggle({
+  Title = "Auto Run",
+  Value = r19_0.AutoRun,
+  Callback = function(r0_19)
+    -- line: [0, 0] id: 19
+    r19_0.AutoRun = r0_19
+  end,
+})
+r48_0:Toggle({
+  Title = "Infinite Fly",
+  Value = r19_0.InfiniteFly,
+  Callback = function(r0_30)
+    -- line: [0, 0] id: 30
+    r19_0.InfiniteFly = r0_30
+    if r0_30 then
+      r45_0()
+    else
+      r46_0()
+    end
+  end,
+})
+r48_0:Toggle({
+  Title = "Click TP (Ctrl)",
+  Value = r19_0.ClickTeleport,
+  Callback = function(r0_39)
+    -- line: [0, 0] id: 39
+    r19_0.ClickTeleport = r0_39
+  end,
+})
+r49_0:Section({
+  Title = "Combat",
+  Icon = "skull",
+})
+r29_0 = r49_0:Dropdown({
+  Title = "Select Enemies",
+  Values = r41_0(),
+  Multi = true,
+  Value = r19_0.AttackTargets,
+  SearchBarEnabled = true,
+  Callback = function(r0_46)
+    -- line: [0, 0] id: 46
+    r19_0.AttackTargets = r0_46
+  end,
+})
+r49_0:Button({
+  Title = "Refresh List",
+  Icon = "refresh-cw",
+  Callback = function()
+    -- line: [0, 0] id: 44
+    if r29_0.Refresh then
+      r29_0:Refresh(r41_0())
+    end
+  end,
+})
+r49_0:Toggle({
+  Title = "Auto Attack (TP)",
+  Value = r19_0.AutoAttack,
+  Callback = function(r0_48)
+    -- line: [0, 0] id: 48
+    r19_0.AutoAttack = r0_48
+  end,
+})
+r49_0:Toggle({
+  Title = "Auto Parry",
+  Value = r19_0.AutoParry,
+  Callback = function(r0_61)
+    -- line: [0, 0] id: 61
+    r19_0.AutoParry = r0_61
+  end,
+})
+r50_0:Section({
+  Title = "Instant Forge",
+  Icon = "anvil",
+})
+r50_0:Paragraph({
+  Title = "âš ï¸ WARNING",
+  Desc = "You MUST quit and reopen the game before using the forge manually after using this!",
+  Image = "alert-triangle",
+})
+r50_0:Dropdown({
+  Title = "Item Type",
+  Values = {
+    "Weapon",
+    "Armor"
+  },
+  Value = r19_0.ForgeItemType,
+  Callback = function(r0_45)
+    -- line: [0, 0] id: 45
+    r19_0.ForgeItemType = r0_45
+  end,
+})
+local r57_0 = {}
+r58_0 = {
+  Iron = 0,
+  Copper = 0,
+  Gold = 0,
+}
+r57_0.Iron = r50_0:Input({
+  Title = "Iron Amount",
+  Value = "0",
+  Callback = function(r0_50)
+    -- line: [0, 0] id: 50
+    r58_0.Iron = tonumber(r0_50) or 0
+  end,
+})
+r57_0.Copper = r50_0:Input({
+  Title = "Copper Amount",
+  Value = "0",
+  Callback = function(r0_32)
+    -- line: [0, 0] id: 32
+    r58_0.Copper = tonumber(r0_32) or 0
+  end,
+})
+r57_0.Gold = r50_0:Input({
+  Title = "Gold Amount",
+  Value = "0",
+  Callback = function(r0_6)
+    -- line: [0, 0] id: 6
+    r58_0.Gold = tonumber(r0_6) or 0
+  end,
+})
+r50_0:Button({
+  Title = "Detect Inventory Ores",
+  Icon = "search",
+  Callback = function()
+    -- line: [0, 0] id: 47
+    local r0_47 = r38_0()
+    r57_0.Iron:Set(tostring(r0_47.Iron or 0))
+    r57_0.Copper:Set(tostring(r0_47.Copper or 0))
+    r57_0.Gold:Set(tostring(r0_47.Gold or 0))
+    r1_0:Notify({
+      Title = "Inventory Loaded",
+      Duration = 2,
+    })
+  end,
+})
+r50_0:Button({
+  Title = "Forge Now",
+  Icon = "hammer",
+  Variant = "Primary",
+  Callback = function()
+    -- line: [0, 0] id: 8
+    r44_0(r58_0, r19_0.ForgeItemType)
+  end,
+})
+r51_0:Section({
+  Title = "Locations",
+  Icon = "map",
+})
+r51_0:Button({
+  Title = "Refresh Locations",
+  Icon = "refresh-cw",
+  Callback = function()
+    -- line: [0, 0] id: 26
+    r1_0:Notify({
+      Title = "Refreshed",
+      Duration = 1,
+    })
+  end,
+})
+for r62_0, r63_0 in ipairs(r42_0()) do
+  r51_0:Button({
+    Title = r63_0.Name,
+    Callback = function()
+      -- line: [0, 0] id: 65
+      if r11_0.Character and r11_0.Character:FindFirstChild("HumanoidRootPart") then
+        local r0_65 = r63_0:IsA("Model")
+        if r0_65 then
+          r0_65 = r63_0:GetPivot() or r63_0.CFrame
+        else
+          goto label_22	-- block#4 is visited secondly
+        end
+        r11_0.Character.HumanoidRootPart.CFrame = r0_65 + Vector3.new(0, 3, 0)
+      end
+    end,
+  })
+  -- close: r62_0
+end
+r52_0:Section({
+  Title = "System",
+  Icon = "settings",
+})
+r52_0:Toggle({
+  Title = "Enable Auto-Load",
+  Value = r20_0.autoLoadEnabled,
+  Callback = function(r0_41)
+    -- line: [0, 0] id: 41
+    r20_0.autoLoadEnabled = r0_41
+    r34_0()
+  end,
+})
+r30_0 = r52_0:Dropdown({
+  Title = "Startup Config",
+  Values = r33_0(),
+  Value = r20_0.autoLoadConfig,
+  SearchBarEnabled = true,
+  Callback = function(r0_34)
+    -- line: [0, 0] id: 34
+    r20_0.autoLoadConfig = r0_34
+    r34_0()
+  end,
+})
+r52_0:Button({
+  Title = "Refresh Configs",
+  Icon = "refresh-cw",
+  Callback = function()
+    -- line: [0, 0] id: 33
+    if r30_0.Refresh then
+      r30_0:Refresh(r33_0())
+    end
+  end,
+})
+r52_0:Divider()
+r59_0 = "mzxn-forge"
+local r62_0 = {
+  Title = "Config Name",
+  Value = r59_0,
+}
+local function r63_0(r0_49)
+  -- line: [0, 0] id: 49
+  r59_0 = r0_49 or "mzxn-forge"
+end
+r62_0.Callback = r63_0
+r52_0:Input(r62_0)
+r62_0 = {
+  Title = "Save Config",
+  Icon = "save",
+  Variant = "Primary",
+}
+function r63_0()
+  -- line: [0, 0] id: 22
+  r35_0(r59_0)
+end
+r62_0.Callback = r63_0
+r52_0:Button(r62_0)
+r62_0 = {
+  Title = "Load Config",
+  Icon = "folder-open",
+}
+function r63_0()
+  -- line: [0, 0] id: 64
+  r36_0(r59_0)
+end
+r62_0.Callback = r63_0
+r52_0:Button(r62_0)
+r52_0:Divider()
+r62_0 = {
+  Title = "Anti-AFK",
+}
+r63_0 = r19_0.antiAFKEnabled
+r62_0.Value = r63_0
+function r63_0(r0_52)
+  -- line: [0, 0] id: 52
+  r19_0.antiAFKEnabled = r0_52
+  if r0_52 then
+    r32_0()
+  end
+end
+r62_0.Callback = r63_0
+r52_0:Toggle(r62_0)
+r62_0 = {
+  Title = "Auto-Reconnect",
+}
+r63_0 = r19_0.autoReconnectEnabled
+r62_0.Value = r63_0
+function r63_0(r0_16)
+  -- line: [0, 0] id: 16
+  r19_0.autoReconnectEnabled = r0_16
+  if r0_16 then
+    r31_0()
+  end
+end
+r62_0.Callback = r63_0
+r52_0:Toggle(r62_0)
+r52_0:Button({
+  Title = "Redeem All Codes",
+  Callback = r39_0,
+})
+task.spawn(function()
+  -- line: [0, 0] id: 13
+  -- notice: unreachable block#25
+  while true do
+    task.wait(0.1)
+    local r0_13 = r11_0.Character
+    local r1_13 = r0_13 and r0_13:FindFirstChild("HumanoidRootPart")
+    if r19_0.AutoMine and r16_0.ToolActivated and r1_13 then
+      if not r0_13:FindFirstChild("Pickaxe") then
+        local r2_13 = r11_0.Backpack:FindFirstChild("Pickaxe")
+        if r2_13 then
+          r0_13.Humanoid:EquipTool(r2_13)
+        end
+      end
+      local r2_13 = false
+      if r21_0.Mining and r21_0.Mining.Parent and r21_0.Mining.Parent.Name == r19_0.MineTarget then
+        local r3_13 = r21_0.Mining.Parent:FindFirstChild("infoFrame")
+        local r4_13 = r3_13 and r3_13.Frame.rockHP.Text
+        if r4_13 then
+          if (tonumber(r4_13:match("%d+")) or 0) > 0 then
+            ::label_78::
+            r2_13 = true
+          end
+        else
+          goto label_78	-- block#17 is visited secondly
+        end
+      end
+      if not r2_13 then
+        r21_0.Mining = nil
+      end
+      if not r21_0.Mining then
+        r21_0.Mining = r43_0(500)
+      end
+      if r21_0.Mining and (r1_13.Position - r21_0.Mining.Position).Magnitude <= 15 then
+        r16_0.ToolActivated:InvokeServer("Pickaxe")
+      end
+    end
+  end
+end)
+r8_0.Heartbeat:Connect(function()
+  -- line: [0, 0] id: 9
+  if r19_0.AutoMine and r21_0.Mining and r11_0.Character and r11_0.Character:FindFirstChild("HumanoidRootPart") then
+    local r0_9 = r11_0.Character.HumanoidRootPart
+    r0_9.Anchored = false
+    r0_9.AssemblyLinearVelocity = Vector3.zero
+    local r1_9 = r21_0.Mining.Position
+    r0_9.CFrame = CFrame.lookAt(r1_9 + Vector3.new(5, 0, 0), r1_9)
+  end
+end)
+task.spawn(function()
+  -- line: [0, 0] id: 53
+  -- notice: unreachable block#41
+  while true do
+    task.wait(0.1)
+    local r0_53 = r11_0.Character
+    if r19_0.AutoAttack and r0_53 then
+      local r1_53 = nil
+      local r2_53 = 500
+      local r3_53 = r9_0:FindFirstChild("Living")
+      if r3_53 then
+        for r7_53, r8_53 in pairs(r3_53:GetChildren()) do
+          if r8_53 ~= r0_53 and r8_53:FindFirstChild("Humanoid") and 0 < r8_53.Humanoid.Health and not r8_53:FindFirstChild("RaceFolder") and not r8_53:FindFirstChild("Animate") then
+            local r9_53 = r8_53.Name:gsub("%d+$", "")
+            local r10_53 = type(r19_0.AttackTargets)
+            if r10_53 == "table" then
+              r10_53 = table.find(r19_0.AttackTargets, "All") or table.find(r19_0.AttackTargets, r9_53) or false
+            else
+              goto label_73	-- block#12 is visited secondly
+            end
+            if r10_53 then
+              local r11_53 = (r0_53.HumanoidRootPart.Position - r8_53.HumanoidRootPart.Position).Magnitude
+              if r11_53 < r2_53 then
+                r1_53 = r8_53
+                r2_53 = r11_53
+              end
+            end
+          end
+        end
+      end
+      r21_0.Combat = r1_53
+      if r1_53 then
+        local r4_53 = r0_53:FindFirstChildWhichIsA("Tool")
+        if not r4_53 or r4_53.Name == "Pickaxe" or r4_53.Name == "Hammer" then
+          for r8_53, r9_53 in ipairs(r11_0.Backpack:GetChildren()) do
+            if r9_53:IsA("Tool") and r9_53.Name ~= "Pickaxe" and r9_53.Name ~= "Hammer" then
+              r0_53.Humanoid:EquipTool(r9_53)
+              r4_53 = r9_53
+              break
+            end
+          end
+        end
+        if r19_0.AutoParry then
+          local r5_53 = r1_53:FindFirstChild("Status")
+          local r6_53 = r5_53 and r5_53:FindFirstChild("Attacking")
+          if r6_53 and r6_53.Value and not r22_0 then
+            r16_0.StartBlock:InvokeServer()
+            r22_0 = true
+          elseif r22_0 and (not r6_53 or not r6_53.Value) then
+            r16_0.StopBlock:InvokeServer()
+            r22_0 = false
+          end
+        end
+        if not r22_0 and r2_53 < 15 then
+          r16_0.ToolActivated:InvokeServer("Weapon")
+        end
+      end
+    end
+  end
+end)
+r8_0.Heartbeat:Connect(function()
+  -- line: [0, 0] id: 29
+  if r19_0.AutoAttack and r21_0.Combat and r11_0.Character and r11_0.Character:FindFirstChild("HumanoidRootPart") then
+    local r0_29 = r11_0.Character.HumanoidRootPart
+    local r1_29 = r21_0.Combat:FindFirstChild("HumanoidRootPart")
+    if r1_29 then
+      r0_29.Anchored = false
+      r0_29.AssemblyLinearVelocity = Vector3.zero
+      r0_29.CFrame = CFrame.lookAt((r1_29.CFrame * CFrame.new(0, 0, 3)).Position, r1_29.Position)
+    end
+  end
+end)
+task.spawn(function()
+  -- line: [0, 0] id: 10
+  -- notice: unreachable block#12
+  while true do
+    task.wait(0.2)
+    local r0_10 = r11_0.Character
+    if r19_0.AutoRun then
+      local r1_10 = r16_0.Run
+      if r1_10 and r0_10 then
+        r1_10 = r0_10:FindFirstChild("Humanoid")
+        if r1_10 then
+          r1_10 = r0_10.Humanoid.Health
+          if r1_10 > 0 then
+            r16_0.Run:InvokeServer()
+          end
+        end
+      end
+    end
+    local r1_10 = r19_0.InfiniteFly
+    if r1_10 then
+      r1_10 = r23_0
+      if not r1_10 then
+        r45_0()
+      end
+    end
+    r1_10 = r19_0.InfiniteFly
+    if not r1_10 then
+      r1_10 = r23_0
+      if r1_10 then
+        r46_0()
+      end
+    end
+  end
+end)
+r4_0.InputBegan:Connect(function(r0_59, r1_59)
+  -- line: [0, 0] id: 59
+  if not r1_59 and r19_0.ClickTeleport and r0_59.UserInputType == Enum.UserInputType.MouseButton1 and r4_0:IsKeyDown(Enum.KeyCode.LeftControl) then
+    local r2_59 = r11_0:GetMouse()
+    if r2_59.Hit and r11_0.Character then
+      r11_0.Character.HumanoidRootPart.CFrame = CFrame.new(r2_59.Hit.Position + Vector3.new(0, 3, 0))
+    end
+  end
+end)
+r1_0:Notify({
+  Title = "MZXN Hub",
+  Content = "Loaded Transparent Edition",
+  Duration = 3,
+})
+-- close: r0_0
