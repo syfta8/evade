@@ -1,16 +1,32 @@
-local WindUI = loadstring(game:HttpGet("https://github.com/Footagesus/WindUI/releases/latest/download/main.lua"))()
-
-local Window = WindUI:CreateWindow({
-    Title = "KOMAT Hub",
-    SubTitle = "Evade Hub on top",
-    TabWidth = 160,
-    Size = UDim2.new(0, 600, 0, 400),
-    Position = UDim2.new(0.5, -300, 0.5, -200),
-    Theme = "Dark",
-    CloseCallback = function()
-        print("UI Closed")
-    end
-})
+local function InitializeWindUI()
+‎    local WindUI = loadstring(game:HttpGet("https://github.com/Footagesus/WindUI/releases/latest/download/main.lua"))()
+‎    return WindUI
+‎end
+‎
+‎local WindUI = InitializeWindUI()
+‎
+‎local Window = WindUI:CreateWindow({
+‎    Title = "Mid-Journey Hub (discord.gg/6UaRDjBY42)",
+‎    Icon = "rbxassetid://105495960707973",
+‎    Author = "SJAD",
+‎    Folder = "MidJourney/Evade",
+‎    Size = UDim2.fromOffset(620, 460),
+‎    Transparent = true,
+‎    Theme = "Dark",
+‎    Resizable = true,
+‎    SideBarWidth = 180,
+‎    ScrollBarEnabled = true,
+‎    User = { Enabled = true, Anonymous = false }
+‎})
+‎
+‎Window:EditOpenButton({
+‎    Title = "Mid-Journey Hub",
+‎    Icon = "monitor",
+‎    CornerRadius = UDim.new(0, 6),
+‎    StrokeThickness = 2,
+‎    Color = ColorSequence.new(Color3.fromRGB(30, 30, 30), Color3.fromRGB(255, 255, 255)),
+‎    Draggable = true
+‎})
 
 local MainTab = Window:CreateTab("Main Menu", "bird")
 local TeleportTab = Window:CreateTab("Teleport", "bird")
