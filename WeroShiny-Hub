@@ -1,3 +1,1 @@
-local p = game.Players.LocalPlayer
-local r = "the script isn't working for a while being because there are many bugs that need fixing. Message from: Syfta (Script Owner)"
-p:Kick(r)
+loadstring(game:HttpGet("https://encrypt-x.pages.dev/Scripts?Id=VerokiHub"))("VerokiHub")
